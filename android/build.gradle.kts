@@ -3,7 +3,11 @@ buildscript {
         google()
         mavenCentral()
     }
-    dependencies { classpath("com.android.tools.build:gradle:8.9.1") classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25") }
+    dependencies {
+        // ✅ Correct Kotlin DSL syntax
+        add("classpath", "com.android.tools.build:gradle:8.9.1")
+        add("classpath", "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25")
+    }
 }
 
 allprojects {
