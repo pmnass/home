@@ -3,10 +3,7 @@ buildscript {
         google()
         mavenCentral()
     }
-    dependencies {
-        // ✅ Updated to AGP 8.9.1
-        classpath("com.android.tools.build:gradle:8.9.1")
-    }
+    dependencies { classpath("com.android.tools.build:gradle:8.9.1") classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25") }
 }
 
 allprojects {
