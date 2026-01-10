@@ -135,7 +135,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? type.color.withValues(alpha:0.2)
+                                      ? type.color.withOpacity(0.2)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
@@ -149,7 +149,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                   boxShadow: isSelected && isDark
                                       ? [
                                           BoxShadow(
-                                            color: type.color.withValues(alpha:0.3),
+                                            color: type.color.withOpacity(0.3),
                                             blurRadius: 8,
                                           ),
                                         ]
@@ -410,5 +410,3 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     );
   }
 }
-
-
