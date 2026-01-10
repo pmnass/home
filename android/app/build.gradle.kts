@@ -26,13 +26,14 @@ android {
         versionName = flutter.versionName
     }
 
-    // ✅ Signing configuration (Kotlin DSL style)
+    // ✅ Signing configuration using Bitrise env vars
     signingConfigs {
         create("release") {
+            // Bitrise mounts uploaded keystore at $HOME/keystores/
             storeFile = file("${System.getenv("HOME")}/keystores/my-release-key.jks")
-            storePassword = System.getenv("821253")
-            keyAlias = System.getenv("my-key-alias")
-            keyPassword = System.getenv("821253")
+            storePassword = System.getenv("BITRISEIO_ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("BITRISEIO_ANDROID_KEYSTORE_ALIAS")
+            keyPassword = System.getenv("BITRISEIO_ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD")
         }
     }
 
