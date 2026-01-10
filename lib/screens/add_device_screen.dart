@@ -135,7 +135,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? type.color.withValues(alpha: 0.2)
+                                      ? type.color.withOpacity(0.2)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
@@ -149,7 +149,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                   boxShadow: isSelected && isDark
                                       ? [
                                           BoxShadow(
-                                            color: type.color.withValues(alpha: 0.3),
+                                            color: type.color.withOpacity(0.3),
                                             blurRadius: 8,
                                           ),
                                         ]
@@ -334,3 +334,79 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                             Switch(
                               value: _hasBattery,
                               onChanged: (value) {
+                                setState(() => _hasBattery = value);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Submit button
+                  ElevatedButton(
+                    onPressed: _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add,
+                          color: isDark
+                              ? AppTheme.neonCyan
+                              : Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Add Device',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppTheme.neonCyan : Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submitForm() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final provider = context.read<AppProvider>();
+    final device = Device(
+      id: const Uuid().v4(),
+      name: _nameController.text.trim(),
+      type: _selectedType,
+      ipAddress: _ipController.text.trim(),
+      gpioPin: int.tryParse(_gpioController.text),
+      roomId: _selectedRoomId,
+      hasBattery: _hasBattery,
+      batteryLevel: _hasBattery ? 100 : null,
+      isOnline: true, // Assume online initially
+    );
+
+    provider.addDevice(device);
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${device.name} added successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+}
