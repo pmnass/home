@@ -26,12 +26,24 @@ android {
         versionName = flutter.versionName
     }
 
-    // ⬅️ No signingConfigs block at all
+    // ✅ Signing configuration
+    signingConfigs {
+        release {
+            storeFile file("C:/Users/DELL/Downloads/new/my-release-key.jks")
+            storePassword "821253"       // your keystore password
+            keyAlias "my-key-alias"        // confirmed alias
+            keyPassword "821253"         // your key password
+        }
+    }
+
     buildTypes {
-        getByName("release") {
+        release {
+            signingConfig signingConfigs.release
             isMinifyEnabled = false
             isShrinkResources = false
-            // ⬅️ No signingConfig → unsigned APK
+        }
+        debug {
+            // Debug builds remain unsigned
         }
     }
 }
