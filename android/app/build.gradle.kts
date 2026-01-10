@@ -26,23 +26,23 @@ android {
         versionName = flutter.versionName
     }
 
-    // ✅ Signing configuration
+    // ✅ Signing configuration (Kotlin DSL style)
     signingConfigs {
-        release {
-            storeFile file("C:/Users/DELL/Downloads/new/my-release-key.jks")
-            storePassword "821253"       // your keystore password
-            keyAlias "my-key-alias"        // confirmed alias
-            keyPassword "821253"         // your key password
+        create("release") {
+            storeFile = file("${System.getenv("HOME")}/keystores/my-release-key.jks")
+            storePassword = System.getenv("821253")
+            keyAlias = System.getenv("my-key-alias")
+            keyPassword = System.getenv("821253")
         }
     }
 
     buildTypes {
-        release {
-            signingConfig signingConfigs.release
+        getByName("release") {
             isMinifyEnabled = false
             isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
         }
-        debug {
+        getByName("debug") {
             // Debug builds remain unsigned
         }
     }
