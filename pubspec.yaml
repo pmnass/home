@@ -50,7 +50,7 @@ dependencies:
   file_picker: ^10.2.0
   just_audio: ^0.10.4
   image: ^4.5.4
-  video_player: 2.10.0
+  
 
   # UI utilities (fully cross-platform)
   flutter_svg: ^2.2.0
