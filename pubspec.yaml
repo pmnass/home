@@ -47,9 +47,9 @@ dependencies:
   flutter_map: ^8.2.1
   
   # ─── Media (images / video / audio) ───
-  #file_picker: ^10.2.0
-  #just_audio: ^0.10.4
-  #image: ^4.5.4
+  file_picker: ^10.2.0
+  just_audio: ^0.10.4
+  image: ^4.5.4
   #video_player: 2.10.0
 
   # UI utilities (fully cross-platform)
