@@ -1,4 +1,4 @@
-package com.example.darvin_app
+package com.darvin.homecircuit
 
 import io.flutter.embedding.android.FlutterActivity
 
