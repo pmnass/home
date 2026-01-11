@@ -33,16 +33,7 @@ android {
         versionName = flutter.versionName
     }
     
-    signingConfigs {
-        create("release") {
-            keyAlias = System.getenv("BITRISEIO_ANDROID_KEYSTORE_ALIAS") ?: keystoreProperties["keyAlias"] as String?
-            keyPassword = System.getenv("BITRISEIO_ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD") ?: keystoreProperties["keyPassword"] as String?
-            storeFile = System.getenv("BITRISEIO_ANDROID_KEYSTORE_PATH")?.let { file(it) } ?: keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = System.getenv("BITRISEIO_ANDROID_KEYSTORE_PASSWORD") ?: keystoreProperties["storePassword"] as String?
-        }
-    }
-    
-    buildTypes {
+   buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
         }
