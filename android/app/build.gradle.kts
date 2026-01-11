@@ -1,16 +1,9 @@
-import java.util.Properties
-import java.io.FileInputStream
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
+
 android {
     namespace = "com.darvin.homecircuit"
     compileSdk = 36
@@ -26,19 +19,21 @@ android {
     }
     
     defaultConfig {
-        applicationId = "com.example.darvin_app"
-        minSdk = 26 // Android 8.0
+        applicationId = "com.darvin.homecircuit"
+        minSdk = 26
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
     
-   buildTypes {
-        release {
-            signingConfig = null
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
+
 flutter {
     source = "../.."
 }
