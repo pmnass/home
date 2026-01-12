@@ -240,7 +240,12 @@ class AppProvider extends ChangeNotifier {
           action: 'EMERGENCY STOP',
           details: 'Water level reached $newLevel%',
         );
-      }
+        NotificationHelper.showWaterLevelAlert(
+  deviceName: device.name,
+  waterLevel: newLevel,
+  isEmergency: true,
+);
+ }
 
       _devices[i] = _devices[i].copyWith(
         waterLevel: newLevel,
@@ -254,6 +259,12 @@ class AppProvider extends ChangeNotifier {
         lpgValue: (random.nextDouble() * 100).clamp(0, 100).toDouble(),
         coValue: (random.nextDouble() * 50).clamp(0, 50).toDouble(),
       );
+      NotificationHelper.showGasAlert(
+  deviceName: device.name,
+  lpgValue: lpg,
+  coValue: co,
+);
+
     }
 
     // Simulate battery
@@ -263,6 +274,11 @@ class AppProvider extends ChangeNotifier {
             .clamp(0, 100)
             .toDouble(),
       );
+      NotificationHelper.showLowBatteryAlert(
+  deviceName: device.name,
+  batteryLevel: newBattery.toInt(),
+);
+
     }
   }
 
