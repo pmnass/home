@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/circuit_background.dart';
 import '../models/wifi_network.dart';
 import '../models/device.dart';
-
+import '../utils/file_download_helper.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -617,19 +617,13 @@ class SettingsScreen extends StatelessWidget {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.download),
-                        color:
-                            isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Saving sketch.ino to Downloads...'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
-                      ),
+                      icon: const Icon(Icons.download),
+                      color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+                      onPressed: () async {
+                      Navigator.pop(context);
+                      await FileDownloadHelper.downloadArduinoCode(code, context);
+                            },
+                           ),
                       IconButton(
                         icon: const Icon(Icons.close),
                         color: isDark ? Colors.white54 : Colors.black54,
