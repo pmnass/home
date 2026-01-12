@@ -195,7 +195,6 @@ class AppProvider extends ChangeNotifier {
       );
 
       // Simulate water level changes for pumps
-     // Simulate water level changes for pumps
 if (device.type == DeviceType.waterPump) {
   int newLevel = device.waterLevel;
 
@@ -283,8 +282,8 @@ if (device.type == DeviceType.waterPump) {
 
 // Simulate gas sensor values
 if (device.type == DeviceType.gasSensor) {
-  final newLpg = (random.nextDouble() * 100).clamp(0.0, 100.0);
-final newCo = (random.nextDouble() * 50).clamp(0.0, 50.0);
+  final newLpg = (random.nextDouble() * 100).clamp(0, 100);
+  final newCo = (random.nextDouble() * 50).clamp(0, 50);
   
   _devices[i] = device.copyWith(
     lpgValue: newLpg,
