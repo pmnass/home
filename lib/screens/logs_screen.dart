@@ -677,13 +677,13 @@ class _DateButton extends StatelessWidget {
   final String label;
   final DateTime? date;
   final VoidCallback onTap;
-  final VoidCallback onClear;
+  final VoidCallback? onClear;
 
   const _DateButton({
     required this.label,
     required this.date,
     required this.onTap,
-    required this.onClear,
+    this.onClear,
   });
 
   @override
