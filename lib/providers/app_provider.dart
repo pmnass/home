@@ -218,6 +218,12 @@ class AppProvider extends ChangeNotifier {
             action: 'Auto ON - Below minimum threshold',
             details: 'Water level: $newLevel%',
           );
+
+          NotificationHelper.showDeviceStatusChange(
+            deviceName: device.name,
+            isOn: true,
+            reason: 'Auto ON - Below minimum threshold',
+          );
         } else if (newLevel >= _pumpMaxThreshold && device.isOn) {
           shouldBeOn = false;
           _addLog(
@@ -226,6 +232,12 @@ class AppProvider extends ChangeNotifier {
             type: LogType.deviceOff,
             action: 'Auto OFF - Above maximum threshold',
             details: 'Water level: $newLevel%',
+          );
+
+          NotificationHelper.showDeviceStatusChange(
+            deviceName: device.name,
+            isOn: false,
+            reason: 'Auto OFF - Above maximum threshold',
           );
         }
       }
@@ -240,12 +252,13 @@ class AppProvider extends ChangeNotifier {
           action: 'EMERGENCY STOP',
           details: 'Water level reached $newLevel%',
         );
+
         NotificationHelper.showWaterLevelAlert(
-  deviceName: device.name,
-  waterLevel: newLevel,
-  isEmergency: true,
-);
- }
+          deviceName: device.name,
+          waterLevel: newLevel,
+          isEmergency: true,
+        );
+      }
 
       _devices[i] = _devices[i].copyWith(
         waterLevel: newLevel,
@@ -255,36 +268,37 @@ class AppProvider extends ChangeNotifier {
 
     // Simulate gas sensor values
     if (device.type == DeviceType.gasSensor) {
-      _devices[i] = device.copyWith(
-        lpgValue: (random.nextDouble() * 100).clamp(0, 100).toDouble(),
-        coValue: (random.nextDouble() * 50).clamp(0, 50).toDouble(),
-      );
-      NotificationHelper.showGasAlert(
-  deviceName: device.name,
-  lpgValue: lpg,
-  coValue: co,
-);
+      final lpg = (random.nextDouble() * 100).clamp(0, 100).toDouble();
+      final co = (random.nextDouble() * 50).clamp(0, 50).toDouble();
 
+      _devices[i] = device.copyWith(lpgValue: lpg, coValue: co);
+
+      NotificationHelper.showGasAlert(
+        deviceName: device.name,
+        lpgValue: lpg,
+        coValue: co,
+      );
     }
 
     // Simulate battery
     if (device.hasBattery && device.batteryLevel != null) {
-      _devices[i] = _devices[i].copyWith(
-        batteryLevel: (device.batteryLevel! - random.nextInt(2))
-            .clamp(0, 100)
-            .toDouble(),
-      );
-      NotificationHelper.showLowBatteryAlert(
-  deviceName: device.name,
-  batteryLevel: newBattery.toInt(),
-);
+      final newBattery = (device.batteryLevel! - random.nextInt(2))
+          .clamp(0, 100)
+          .toInt();
 
+      _devices[i] = _devices[i].copyWith(batteryLevel: newBattery);
+
+      NotificationHelper.showLowBatteryAlert(
+        deviceName: device.name,
+        batteryLevel: newBattery,
+      );
     }
   }
 
   _saveToStorage();
   notifyListeners();
 }
+
 
 
   // Sync
