@@ -536,6 +536,8 @@ class _LogsScreenState extends State<LogsScreen> {
   }
 }
 
+// ===================== Helper Widgets =====================
+
 class _FilterChip extends StatelessWidget {
   final String label;
   final VoidCallback onRemove;
@@ -543,47 +545,14 @@ class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
     required this.onRemove,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.neonCyan.withOpacity(0.2)
-            : Theme.of(context).primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark
-              ? AppTheme.neonCyan.withOpacity(0.5)
-              : Theme.of(context).primaryColor.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            child: Icon(
-              Icons.close,
-              size: 16,
-              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-            ),
-          ),
-        ],
-      ),
+    return Chip(
+      label: Text(label),
+      onDeleted: onRemove,
     );
   }
 }
@@ -591,82 +560,24 @@ class _FilterChip extends StatelessWidget {
 class _LogEntryCard extends StatelessWidget {
   final LogEntry log;
 
-  const _LogEntryCard({required this.log});
+  const _LogEntryCard({
+    required this.log,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: GlassCard(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Type indicator
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: log.type.color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                log.type.icon,
-                color: log.type.color,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Log info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          log.deviceName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('HH:mm:ss').format(log.timestamp),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white38 : Colors.black38,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    log.action,
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (log.details != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      log.details!,
-                      style: TextStyle(
-                        color: isDark ? Colors.white38 : Colors.black38,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListTile(
+        leading: Icon(
+          log.type.icon,
+          color: isDark ? Colors.white70 : Colors.black87,
+        ),
+        title: Text(log.action),
+        subtitle: Text(
+          '${log.deviceName} • ${DateFormat('hh:mm a').format(log.timestamp)}',
         ),
       ),
     );
@@ -677,61 +588,38 @@ class _DateButton extends StatelessWidget {
   final String label;
   final DateTime? date;
   final VoidCallback onTap;
-  final VoidCallback? onClear;
+  final VoidCallback onClear;
 
   const _DateButton({
     required this.label,
     required this.date,
     required this.onTap,
-    this.onClear,
-  });
+    required this.onClear,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.circuitLine.withOpacity(0.5)
-              : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? AppTheme.neonCyan.withOpacity(0.3) : Colors.grey.shade300,
-          ),
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(
+          color: isDark ? Colors.white54 : Colors.black54,
         ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 18,
-              color: isDark ? Colors.white54 : Colors.black54,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(date != null
+              ? DateFormat('M/d/yyyy').format(date!)
+              : label),
+          if (date != null)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: onClear,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                date != null ? DateFormat('M/d/yy').format(date!) : label,
-                style: TextStyle(
-                  color: date != null
-                      ? (isDark ? Colors.white : Colors.black87)
-                      : (isDark ? Colors.white38 : Colors.black38),
-                ),
-              ),
-            ),
-            if (date != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(
-                  Icons.close,
-                  size: 18,
-                  color: isDark ? Colors.white54 : Colors.black54,
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -748,33 +636,16 @@ class _TypeChip extends StatelessWidget {
     required this.isSelected,
     required this.color,
     required this.onTap,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? color : (isDark ? Colors.white24 : Colors.black12),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? color : (isDark ? Colors.white54 : Colors.black54),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          ),
-        ),
-      ),
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: color.withValues(alpha: 0.2),
+      onSelected: (_) => onTap(),
     );
   }
 }
