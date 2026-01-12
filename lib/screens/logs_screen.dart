@@ -6,7 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/circuit_background.dart';
 import '../models/log_entry.dart';
 import '../models/device.dart';
-
+import '../utils/file_download_helper.dart';
 class LogsScreen extends StatefulWidget {
   const LogsScreen({super.key});
 
