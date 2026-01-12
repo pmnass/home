@@ -183,146 +183,93 @@ class AppProvider extends ChangeNotifier {
   }
 
   void _runSimulation() {
-    final random = math.Random();
+  final random = math.Random();
 
-    for (int i = 0; i < _devices.length; i++) {
-      final device = _devices[i];
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
 
-      // Simulate online status
-      _devices[i] = device.copyWith(
-        isOnline: random.nextDouble() > 0.1,
-        lastSeen: DateTime.now(),
-      );
-
-      // Simulate water level changes for pumps
-if (device.type == DeviceType.waterPump) {
-  int newLevel = device.waterLevel;
-
-  if (device.isOn) {
-    // Pump is filling - increase water level
-    newLevel = (device.waterLevel + random.nextInt(5) + 1).clamp(0, 100);
-  } else {
-    // Water is draining - decrease level slowly
-    newLevel = (device.waterLevel - random.nextInt(3)).clamp(0, 100);
-  }
-
-  // Apply auto-mode logic
-  bool shouldBeOn = device.isOn;
-  if (_appMode == AppMode.remote) {
-    if (newLevel <= _pumpMinThreshold && !device.isOn) {
-      shouldBeOn = true;
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.deviceOn,
-        action: 'Auto ON - Below minimum threshold',
-        details: 'Water level: $newLevel%',
-      );
-      
-      // SEND NOTIFICATION
-      if (_notificationsEnabled && device.notificationsEnabled) {
-        NotificationHelper.showWaterLevelAlert(
-          deviceName: device.name,
-          waterLevel: newLevel,
-          isEmergency: false,
-        );
-        NotificationHelper.showDeviceStatusChange(
-          deviceName: device.name,
-          isOn: true,
-          reason: 'Water level below $_pumpMinThreshold%',
-        );
-      }
-    } else if (newLevel >= _pumpMaxThreshold && device.isOn) {
-      shouldBeOn = false;
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.deviceOff,
-        action: 'Auto OFF - Above maximum threshold',
-        details: 'Water level: $newLevel%',
-      );
-      
-      // SEND NOTIFICATION
-      if (_notificationsEnabled && device.notificationsEnabled) {
-        NotificationHelper.showDeviceStatusChange(
-          deviceName: device.name,
-          isOn: false,
-          reason: 'Water level above $_pumpMaxThreshold%',
-        );
-      }
-    }
-  }
-
-  // Emergency stop at 98%
-  if (newLevel >= emergencyStopLevel && device.isOn) {
-    shouldBeOn = false;
-    _addLog(
-      deviceId: device.id,
-      deviceName: device.name,
-      type: LogType.warning,
-      action: 'EMERGENCY STOP',
-      details: 'Water level reached $newLevel%',
+    // Simulate online status
+    _devices[i] = device.copyWith(
+      isOnline: random.nextDouble() > 0.1,
+      lastSeen: DateTime.now(),
     );
-    
-    // SEND EMERGENCY NOTIFICATION
-    if (_notificationsEnabled) {
-      NotificationHelper.showWaterLevelAlert(
-        deviceName: device.name,
+
+    // Simulate water level changes for pumps
+    if (device.type == DeviceType.waterPump) {
+      int newLevel = device.waterLevel;
+
+      if (device.isOn) {
+        // Pump is filling - increase water level
+        newLevel = (device.waterLevel + random.nextInt(5) + 1).clamp(0, 100);
+      } else {
+        // Water is draining - decrease level slowly
+        newLevel = (device.waterLevel - random.nextInt(3)).clamp(0, 100);
+      }
+
+      // Apply auto-mode logic
+      bool shouldBeOn = device.isOn;
+      if (_appMode == AppMode.remote) {
+        if (newLevel <= _pumpMinThreshold && !device.isOn) {
+          shouldBeOn = true;
+          _addLog(
+            deviceId: device.id,
+            deviceName: device.name,
+            type: LogType.deviceOn,
+            action: 'Auto ON - Below minimum threshold',
+            details: 'Water level: $newLevel%',
+          );
+        } else if (newLevel >= _pumpMaxThreshold && device.isOn) {
+          shouldBeOn = false;
+          _addLog(
+            deviceId: device.id,
+            deviceName: device.name,
+            type: LogType.deviceOff,
+            action: 'Auto OFF - Above maximum threshold',
+            details: 'Water level: $newLevel%',
+          );
+        }
+      }
+
+      // Emergency stop at 98%
+      if (newLevel >= emergencyStopLevel && device.isOn) {
+        shouldBeOn = false;
+        _addLog(
+          deviceId: device.id,
+          deviceName: device.name,
+          type: LogType.warning,
+          action: 'EMERGENCY STOP',
+          details: 'Water level reached $newLevel%',
+        );
+      }
+
+      _devices[i] = _devices[i].copyWith(
         waterLevel: newLevel,
-        isEmergency: true,
+        isOn: shouldBeOn,
+      );
+    }
+
+    // Simulate gas sensor values
+    if (device.type == DeviceType.gasSensor) {
+      _devices[i] = device.copyWith(
+        lpgValue: (random.nextDouble() * 100).clamp(0, 100).toDouble(),
+        coValue: (random.nextDouble() * 50).clamp(0, 50).toDouble(),
+      );
+    }
+
+    // Simulate battery
+    if (device.hasBattery && device.batteryLevel != null) {
+      _devices[i] = _devices[i].copyWith(
+        batteryLevel: (device.batteryLevel! - random.nextInt(2))
+            .clamp(0, 100)
+            .toDouble(),
       );
     }
   }
 
-  _devices[i] = _devices[i].copyWith(
-    waterLevel: newLevel,
-    isOn: shouldBeOn,
-  );
+  _saveToStorage();
+  notifyListeners();
 }
 
-// Simulate gas sensor values
-if (device.type == DeviceType.gasSensor) {
-  final newLpg = (random.nextDouble() * 100).clamp(0, 100);
-  final newCo = (random.nextDouble() * 50).clamp(0, 50);
-  
-  _devices[i] = device.copyWith(
-    lpgValue: newLpg,
-    coValue: newCo,
-  );
-  
-  // SEND GAS ALERT NOTIFICATION
-  if (_notificationsEnabled && device.notificationsEnabled) {
-    if (newLpg > 50 || newCo > 30) {
-      NotificationHelper.showGasAlert(
-        deviceName: device.name,
-        lpgValue: newLpg,
-        coValue: newCo,
-      );
-    }
-  }
-}
-
-// Simulate battery
-if (device.hasBattery && device.batteryLevel != null) {
-  final newBattery = (device.batteryLevel! - random.nextInt(2)).clamp(0, 100);
-  
-  _devices[i] = _devices[i].copyWith(
-    batteryLevel: newBattery,
-  );
-  
-  // SEND LOW BATTERY NOTIFICATION
-  if (_notificationsEnabled && device.notificationsEnabled) {
-    if (newBattery <= 20 && device.batteryLevel! > 20) {
-      NotificationHelper.showLowBatteryAlert(
-        deviceName: device.name,
-        batteryLevel: newBattery,
-      );
-    }
-  }
-}
-    _saveToStorage();
-    notifyListeners();
-  }
 
   // Sync
   Future<void> syncDevices() async {
