@@ -482,61 +482,57 @@ class _LogsScreenState extends State<LogsScreen> {
   }
 
   void _exportLogs(
-    BuildContext context,
-    AppProvider provider,
-    List<LogEntry> logs,
-  ) {
-    final csv = provider.exportLogsToCSV(logs);
+  BuildContext context,
+  AppProvider provider,
+  List<LogEntry> logs,
+) async {
+  final csv = provider.exportLogsToCSV(logs);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Logs'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${logs.length} log entries ready to export.'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.circuitLine
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                csv.split('\n').take(5).join('\n') +
-                    (logs.length > 4 ? '\n...' : ''),
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 10,
-                ),
+  // Show preview dialog
+  final shouldExport = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Export Logs'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${logs.length} log entries ready to export.'),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.circuitLine
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              csv.split('\n').take(5).join('\n') +
+                  (logs.length > 4 ? '\n...' : ''),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logs exported to Downloads folder'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Export CSV'),
           ),
         ],
       ),
-    );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Export CSV'),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldExport == true && context.mounted) {
+    await FileDownloadHelper.downloadLogsCSV(csv, context);
   }
 }
 
