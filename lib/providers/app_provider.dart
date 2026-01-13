@@ -673,6 +673,8 @@ class AppProvider extends ChangeNotifier {
     buffer.writeln();
    buffer.writeln('// ========== DEVICE CONFIGURATION ==========');
 
+buffer.writeln('// ========== DEVICE CONFIGURATION ==========');
+
 // Create simple device IDs (DEV_0, DEV_1, DEV_2...)
 for (int i = 0; i < _devices.length; i++) {
   final device = _devices[i];
@@ -683,7 +685,10 @@ for (int i = 0; i < _devices.length; i++) {
   buffer.writeln('const char* ${devId}_NAME = "${device.name}";');
   buffer.writeln('const char* ${devId}_IP = "${device.ipAddress}";');
   if (device.gpioPin != null) {
-    buffer.writeln('const int ${devId}_GPIO = ${device.gpioPin};');
+    buffer.writeln('const int ${devId}_GPIO_OUT = ${device.gpioPin};  // Controls relay/device');
+  }
+  if (device.statusGpioPin != null) {
+    buffer.writeln('const int ${devId}_GPIO_IN = ${device.statusGpioPin};  // Reads physical switch');
   }
 }
 
@@ -691,9 +696,13 @@ buffer.writeln();
 buffer.writeln('// ========== GPIO PIN DEFINITIONS ==========');
 for (int i = 0; i < _devices.length; i++) {
   final device = _devices[i];
+  final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+  
   if (device.gpioPin != null) {
-    final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
-    buffer.writeln('#define PIN_$pinName ${device.gpioPin}  // Device $i');
+    buffer.writeln('#define PIN_${pinName}_OUT ${device.gpioPin}  // Device $i output');
+  }
+  if (device.statusGpioPin != null) {
+    buffer.writeln('#define PIN_${pinName}_IN ${device.statusGpioPin}  // Device $i input');
   }
 }
 
@@ -711,31 +720,36 @@ for (int i = 0; i < _devices.length; i++) {
     buffer.writeln('ESP8266WebServer server(80);');
     buffer.writeln();
     buffer.writeln('void setup() {');
-    buffer.writeln('  Serial.begin(115200);');
-    buffer.writeln('  ');
-    buffer.writeln('  // Initialize GPIO pins');
-    for (final device in _devices) {
-      if (device.gpioPin != null) {
-        buffer.writeln(
-            '  pinMode(PIN_${device.name.toUpperCase().replaceAll(' ', '_')}, OUTPUT);');
-      }
-    }
-    buffer.writeln('  ');
-    buffer.writeln('  // Connect to WiFi');
-    buffer.writeln('  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);');
-    buffer.writeln('  while (WiFi.status() != WL_CONNECTED) {');
-    buffer.writeln('    delay(500);');
-    buffer.writeln('    Serial.print(".");');
-    buffer.writeln('  }');
-    buffer.writeln('  Serial.println("");');
-    buffer.writeln('  Serial.print("Connected! IP: ");');
-    buffer.writeln('  Serial.println(WiFi.localIP());');
-    buffer.writeln('  ');
-    buffer.writeln('  // Setup HTTP routes');
-    buffer.writeln('  server.on("/status", handleStatus);');
-    buffer.writeln('  server.on("/control", handleControl);');
-    buffer.writeln('  server.begin();');
-    buffer.writeln('}');
+buffer.writeln('  Serial.begin(115200);');
+buffer.writeln('  ');
+buffer.writeln('  // Initialize GPIO pins');
+for (int i = 0; i < _devices.length; i++) {
+  final device = _devices[i];
+  final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+  
+  if (device.gpioPin != null) {
+    buffer.writeln('  pinMode(PIN_${pinName}_OUT, OUTPUT);  // ${device.name} relay control');
+  }
+  if (device.statusGpioPin != null) {
+    buffer.writeln('  pinMode(PIN_${pinName}_IN, INPUT_PULLUP);  // ${device.name} switch input');
+  }
+}
+buffer.writeln('  ');
+buffer.writeln('  // Connect to WiFi');
+buffer.writeln('  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);');
+buffer.writeln('  while (WiFi.status() != WL_CONNECTED) {');
+buffer.writeln('    delay(500);');
+buffer.writeln('    Serial.print(".");');
+buffer.writeln('  }');
+buffer.writeln('  Serial.println("");');
+buffer.writeln('  Serial.print("Connected! IP: ");');
+buffer.writeln('  Serial.println(WiFi.localIP());');
+buffer.writeln('  ');
+buffer.writeln('  // Setup HTTP routes');
+buffer.writeln('  server.on("/status", handleStatus);');
+buffer.writeln('  server.on("/control", handleControl);');
+buffer.writeln('  server.begin();');
+buffer.writeln('}');
     buffer.writeln();
     buffer.writeln('void loop() {');
     buffer.writeln('  server.handleClient();');
