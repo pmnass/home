@@ -261,6 +261,17 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 16),
+                        // NEW: Status GPIO Pin field
+TextField(
+  controller: statusGpioPinController,  // Add this controller
+  decoration: const InputDecoration(
+    labelText: 'Status GPIO Pin (Optional - Reads Switch)',
+    hintText: 'e.g., 1 (leave empty if not used)',
+    prefixIcon: Icon(Icons.sensors),
+    helperText: 'For reading physical switch state',
+  ),
+  keyboardType: TextInputType.number,
+),
                         // Room selection
                         DropdownButtonFormField<String?>(
                           value: _selectedRoomId,
@@ -388,11 +399,18 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
     final provider = context.read<AppProvider>();
     final device = Device(
-      id: const Uuid().v4(),
-      name: _nameController.text.trim(),
-      type: _selectedType,
-      ipAddress: _ipController.text.trim(),
-      gpioPin: int.tryParse(_gpioController.text),
+  id: uuid.v4(),
+  name: nameController.text,
+  type: selectedType,
+  ipAddress: ipController.text,
+  gpioPin: gpioPinController.text.isNotEmpty 
+      ? int.parse(gpioPinController.text) 
+      : null,
+  statusGpioPin: statusGpioPinController.text.isNotEmpty   // NEW
+      ? int.parse(statusGpioPinController.text) 
+      : null,
+  )
+      
       roomId: _selectedRoomId,
       hasBattery: _hasBattery,
       batteryLevel: _hasBattery ? 100 : null,
