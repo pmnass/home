@@ -5,8 +5,7 @@ enum DeviceType {
   fan,
   waterPump,
   gasSensor,
-  sensorOnly,
-  custom,
+  // Add more types as needed
 }
 
 extension DeviceTypeExtension on DeviceType {
@@ -20,67 +19,55 @@ extension DeviceTypeExtension on DeviceType {
         return 'Water Pump';
       case DeviceType.gasSensor:
         return 'Gas Sensor';
-      case DeviceType.sensorOnly:
-        return 'Sensor Only';
-      case DeviceType.custom:
-        return 'Custom';
     }
   }
 
   IconData get icon {
     switch (this) {
       case DeviceType.light:
-        return Icons.lightbulb_outline;
+        return Icons.lightbulb;
       case DeviceType.fan:
         return Icons.air;
       case DeviceType.waterPump:
-        return Icons.water_drop_outlined;
+        return Icons.water_drop;
       case DeviceType.gasSensor:
         return Icons.sensors;
-      case DeviceType.sensorOnly:
-        return Icons.speed;
-      case DeviceType.custom:
-        return Icons.settings_input_component;
     }
   }
 
   Color get color {
     switch (this) {
       case DeviceType.light:
-        return const Color(0xFFFFEB3B);
+        return Colors.amber;
       case DeviceType.fan:
-        return const Color(0xFF00BCD4);
+        return Colors.blue;
       case DeviceType.waterPump:
-        return const Color(0xFF2196F3);
+        return Colors.cyan;
       case DeviceType.gasSensor:
-        return const Color(0xFFFF9800);
-      case DeviceType.sensorOnly:
-        return const Color(0xFF9C27B0);
-      case DeviceType.custom:
-        return const Color(0xFF607D8B);
+        return Colors.orange;
     }
   }
 }
 
 class Device {
   final String id;
-  String name;
-  DeviceType type;
-  String ipAddress;
-  int? gpioPin;
-  String? roomId;
-  bool isOn;
-  bool isOnline;
-  int? batteryLevel;
-  bool hasBattery;
-  int brightness; // 0-100 for lights
-  int fanSpeed; // 1-5 for fans
-  int waterLevel; // 0-100 for pumps
-  double lpgValue; // For gas sensors
-  double coValue; // For gas sensors
-  bool notificationsEnabled;
-  DateTime lastSeen;
-  DateTime createdAt;
+  final String name;
+  final DeviceType type;
+  final String ipAddress;
+  final int? gpioPin;              // OUTPUT pin (controls relay)
+  final int? statusGpioPin;        // NEW: INPUT pin (reads physical switch)
+  final String? roomId;
+  final bool isOnline;
+  final bool isOn;
+  final DateTime? lastSeen;
+  final int? brightness;
+  final int? fanSpeed;
+  final int waterLevel;
+  final double? lpgValue;
+  final double? coValue;
+  final bool hasBattery;
+  final int? batteryLevel;
+  final bool notificationsEnabled;
 
   Device({
     required this.id,
@@ -88,21 +75,20 @@ class Device {
     required this.type,
     required this.ipAddress,
     this.gpioPin,
+    this.statusGpioPin,              // NEW
     this.roomId,
-    this.isOn = false,
     this.isOnline = false,
-    this.batteryLevel,
+    this.isOn = false,
+    this.lastSeen,
+    this.brightness,
+    this.fanSpeed,
+    this.waterLevel = 0,
+    this.lpgValue,
+    this.coValue,
     this.hasBattery = false,
-    this.brightness = 100,
-    this.fanSpeed = 1,
-    this.waterLevel = 50,
-    this.lpgValue = 0,
-    this.coValue = 0,
+    this.batteryLevel,
     this.notificationsEnabled = true,
-    DateTime? lastSeen,
-    DateTime? createdAt,
-  })  : lastSeen = lastSeen ?? DateTime.now(),
-        createdAt = createdAt ?? DateTime.now();
+  });
 
   Device copyWith({
     String? id,
@@ -110,19 +96,19 @@ class Device {
     DeviceType? type,
     String? ipAddress,
     int? gpioPin,
+    int? statusGpioPin,              // NEW
     String? roomId,
-    bool? isOn,
     bool? isOnline,
-    int? batteryLevel,
-    bool? hasBattery,
+    bool? isOn,
+    DateTime? lastSeen,
     int? brightness,
     int? fanSpeed,
     int? waterLevel,
     double? lpgValue,
     double? coValue,
+    bool? hasBattery,
+    int? batteryLevel,
     bool? notificationsEnabled,
-    DateTime? lastSeen,
-    DateTime? createdAt,
   }) {
     return Device(
       id: id ?? this.id,
@@ -130,68 +116,67 @@ class Device {
       type: type ?? this.type,
       ipAddress: ipAddress ?? this.ipAddress,
       gpioPin: gpioPin ?? this.gpioPin,
+      statusGpioPin: statusGpioPin ?? this.statusGpioPin,  // NEW
       roomId: roomId ?? this.roomId,
-      isOn: isOn ?? this.isOn,
       isOnline: isOnline ?? this.isOnline,
-      batteryLevel: batteryLevel ?? this.batteryLevel,
-      hasBattery: hasBattery ?? this.hasBattery,
+      isOn: isOn ?? this.isOn,
+      lastSeen: lastSeen ?? this.lastSeen,
       brightness: brightness ?? this.brightness,
       fanSpeed: fanSpeed ?? this.fanSpeed,
       waterLevel: waterLevel ?? this.waterLevel,
       lpgValue: lpgValue ?? this.lpgValue,
       coValue: coValue ?? this.coValue,
+      hasBattery: hasBattery ?? this.hasBattery,
+      batteryLevel: batteryLevel ?? this.batteryLevel,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      lastSeen: lastSeen ?? this.lastSeen,
-      createdAt: createdAt ?? this.createdAt,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'type': type.index,
-        'ipAddress': ipAddress,
-        'gpioPin': gpioPin,
-        'roomId': roomId,
-        'isOn': isOn,
-        'isOnline': isOnline,
-        'batteryLevel': batteryLevel,
-        'hasBattery': hasBattery,
-        'brightness': brightness,
-        'fanSpeed': fanSpeed,
-        'waterLevel': waterLevel,
-        'lpgValue': lpgValue,
-        'coValue': coValue,
-        'notificationsEnabled': notificationsEnabled,
-        'lastSeen': lastSeen.toIso8601String(),
-        'createdAt': createdAt.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.index,
+      'ipAddress': ipAddress,
+      'gpioPin': gpioPin,
+      'statusGpioPin': statusGpioPin,  // NEW
+      'roomId': roomId,
+      'isOnline': isOnline,
+      'isOn': isOn,
+      'lastSeen': lastSeen?.toIso8601String(),
+      'brightness': brightness,
+      'fanSpeed': fanSpeed,
+      'waterLevel': waterLevel,
+      'lpgValue': lpgValue,
+      'coValue': coValue,
+      'hasBattery': hasBattery,
+      'batteryLevel': batteryLevel,
+      'notificationsEnabled': notificationsEnabled,
+    };
+  }
 
-  factory Device.fromJson(Map<String, dynamic> json) => Device(
-        id: json['id'],
-        name: json['name'],
-        type: DeviceType.values[json['type']],
-        ipAddress: json['ipAddress'],
-        gpioPin: json['gpioPin'],
-        roomId: json['roomId'],
-        isOn: json['isOn'] ?? false,
-        isOnline: json['isOnline'] ?? false,
-        batteryLevel: json['batteryLevel'],
-        hasBattery: json['hasBattery'] ?? false,
-        brightness: json['brightness'] ?? 100,
-        fanSpeed: json['fanSpeed'] ?? 1,
-        waterLevel: json['waterLevel'] ?? 50,
-        lpgValue: (json['lpgValue'] ?? 0).toDouble(),
-        coValue: (json['coValue'] ?? 0).toDouble(),
-        notificationsEnabled: json['notificationsEnabled'] ?? true,
-        lastSeen: json['lastSeen'] != null
-            ? DateTime.parse(json['lastSeen'])
-            : DateTime.now(),
-        createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'])
-            : DateTime.now(),
-      );
-
-  bool get isStale =>
-      DateTime.now().difference(lastSeen).inMinutes > 5;
+  factory Device.fromJson(Map<String, dynamic> json) {
+    return Device(
+      id: json['id'],
+      name: json['name'],
+      type: DeviceType.values[json['type']],
+      ipAddress: json['ipAddress'],
+      gpioPin: json['gpioPin'],
+      statusGpioPin: json['statusGpioPin'],  // NEW
+      roomId: json['roomId'],
+      isOnline: json['isOnline'] ?? false,
+      isOn: json['isOn'] ?? false,
+      lastSeen: json['lastSeen'] != null
+          ? DateTime.parse(json['lastSeen'])
+          : null,
+      brightness: json['brightness'],
+      fanSpeed: json['fanSpeed'],
+      waterLevel: json['waterLevel'] ?? 0,
+      lpgValue: json['lpgValue']?.toDouble(),
+      coValue: json['coValue']?.toDouble(),
+      hasBattery: json['hasBattery'] ?? false,
+      batteryLevel: json['batteryLevel'],
+      notificationsEnabled: json['notificationsEnabled'] ?? true,
+    );
+  }
 }
