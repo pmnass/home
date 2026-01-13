@@ -752,35 +752,100 @@ buffer.writeln('  server.begin();');
 buffer.writeln('}');
     buffer.writeln();
     buffer.writeln('void loop() {');
-    buffer.writeln('  server.handleClient();');
+buffer.writeln('  server.handleClient();');
+buffer.writeln('  ');
 
-    // Add pump auto logic
-    final pumps =
-        _devices.where((d) => d.type == DeviceType.waterPump).toList();
-    if (pumps.isNotEmpty) {
-      buffer.writeln('  ');
-      buffer.writeln('  // Pump auto-control logic');
-      buffer.writeln('  checkWaterLevels();');
-    }
+// Add physical switch sync for devices with status GPIO
+final devicesWithStatusGpio = _devices.where((d) => d.statusGpioPin != null).toList();
+if (devicesWithStatusGpio.isNotEmpty) {
+  buffer.writeln('  // Sync relays with physical switches');
+  for (final device in devicesWithStatusGpio) {
+    final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+    buffer.writeln('  // ${device.name}');
+    buffer.writeln('  if (digitalRead(PIN_${pinName}_IN) == LOW) {  // Switch pressed (pull-up)');
+    buffer.writeln('    digitalWrite(PIN_${pinName}_OUT, HIGH);  // Turn ON');
+    buffer.writeln('  } else {');
+    buffer.writeln('    digitalWrite(PIN_${pinName}_OUT, LOW);  // Turn OFF');
+    buffer.writeln('  }');
+    buffer.writeln('  ');
+  }
+}
 
-    buffer.writeln('}');
-    buffer.writeln();
-    buffer.writeln('void handleStatus() {');
-    buffer.writeln('  String json = "{";');
-    buffer.writeln('  json += "\\"online\\": true,";');
-    buffer.writeln('  json += "\\"devices\\": [";');
-    buffer.writeln('  // Add device statuses here');
-    buffer.writeln('  json += "]";');
-    buffer.writeln('  json += "}";');
-    buffer.writeln('  server.send(200, "application/json", json);');
-    buffer.writeln('}');
+// Add pump auto logic
+final pumps = _devices.where((d) => d.type == DeviceType.waterPump).toList();
+if (pumps.isNotEmpty) {
+  buffer.writeln('  // Pump auto-control logic');
+  buffer.writeln('  checkWaterLevels();');
+}
+
+buffer.writeln('}');
     buffer.writeln();
     buffer.writeln('void handleControl() {');
-    buffer.writeln('  String device = server.arg("device");');
-    buffer.writeln('  String action = server.arg("action");');
-    buffer.writeln('  // Implement device control logic');
-    buffer.writeln('  server.send(200, "application/json", "{\\"success\\": true}");');
-    buffer.writeln('}');
+buffer.writeln('  String device = server.arg("device");');
+buffer.writeln('  String action = server.arg("action");');
+buffer.writeln('  ');
+buffer.writeln('  // Control devices based on device ID');
+
+for (int i = 0; i < _devices.length; i++) {
+  final device = _devices[i];
+  if (device.gpioPin == null) continue;  // Skip sensors
+  
+  final devId = 'DEV_$i';
+  final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+  
+  buffer.writeln('  ${i > 0 ? 'else ' : ''}if (device == "$devId") {');
+  buffer.writeln('    if (action == "on") {');
+  buffer.writeln('      digitalWrite(PIN_${pinName}_OUT, HIGH);');
+  buffer.writeln('    } else if (action == "off") {');
+  buffer.writeln('      digitalWrite(PIN_${pinName}_OUT, LOW);');
+  buffer.writeln('    }');
+  buffer.writeln('  }');
+}
+
+buffer.writeln('  ');
+buffer.writeln('  server.send(200, "application/json", "{\\"success\\": true}");');
+buffer.writeln('}');
+  
+  buffer.writeln('  // Device $i: ${device.name}');
+  buffer.writeln('  json += "{";');
+  buffer.writeln('  json += "\\"id\\": \\"$devId\\",";');
+  buffer.writeln('  json += "\\"name\\": \\"" + String(${devId}_NAME) + "\\",";');
+  
+  // Report actual state based on available GPIO
+  if (device.statusGpioPin != null) {
+    // Has status GPIO - read from INPUT pin (more accurate)
+    buffer.writeln('  json += "\\"isOn\\": " + String(digitalRead(PIN_${pinName}_IN) == LOW ? "true" : "false") + ",";');
+  } else if (device.gpioPin != null) {
+    // No status GPIO - read from OUTPUT pin (fallback)
+    buffer.writeln('  json += "\\"isOn\\": " + String(digitalRead(PIN_${pinName}_OUT) == HIGH ? "true" : "false") + ",";');
+  }
+  
+  if (device.gpioPin != null) {
+    buffer.writeln('  json += "\\"gpio\\": " + String(${devId}_GPIO_OUT);');
+  }
+  
+  // Add sensor-specific data
+  if (device.type == DeviceType.waterPump) {
+    buffer.writeln('  json += ",";');
+    buffer.writeln('  json += "\\"waterLevel\\": " + String(map(analogRead(A0), 0, 1024, 0, 100));');
+  } else if (device.type == DeviceType.gasSensor) {
+    buffer.writeln('  json += ",";');
+    buffer.writeln('  json += "\\"lpg\\": " + String(random(0, 100)) + ",";');
+    buffer.writeln('  json += "\\"co\\": " + String(random(0, 50));');
+  }
+  
+  buffer.writeln('  json += "}";');
+  
+  if (i < _devices.length - 1) {
+    buffer.writeln('  json += ",";');
+  }
+}
+
+buffer.writeln('  ');
+buffer.writeln('  json += "]";');
+buffer.writeln('  json += "}";');
+buffer.writeln('  server.send(200, "application/json", json);');
+buffer.writeln('}');
 
     if (pumps.isNotEmpty) {
       buffer.writeln();
