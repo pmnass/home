@@ -1171,3 +1171,4 @@ void dispose() {
   _simulationTimer?.cancel();
   super.dispose();
 }
+}
