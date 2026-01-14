@@ -710,6 +710,8 @@ class AppProvider extends ChangeNotifier {
   // Arduino Code Generation
   // Updated generateArduinoCode() method for app_provider.dart
 
+// Updated generateArduinoCode() method for app_provider.dart
+
 String generateArduinoCode() {
   final buffer = StringBuffer();
 
@@ -738,6 +740,10 @@ String generateArduinoCode() {
   buffer.writeln('const int PUMP_MIN_THRESHOLD = $_pumpMinThreshold;');
   buffer.writeln('const int PUMP_MAX_THRESHOLD = $_pumpMaxThreshold;');
   buffer.writeln('const int EMERGENCY_STOP_LEVEL = $emergencyStopLevel;');
+  buffer.writeln();
+  buffer.writeln('// Dynamic threshold variables (can be updated via HTTP)');
+  buffer.writeln('int currentPumpMin = PUMP_MIN_THRESHOLD;');
+  buffer.writeln('int currentPumpMax = PUMP_MAX_THRESHOLD;');
   buffer.writeln();
   
   buffer.writeln('// ========== DEVICE CONFIGURATION ==========');
@@ -824,6 +830,7 @@ String generateArduinoCode() {
   buffer.writeln('  // Setup HTTP routes');
   buffer.writeln('  server.on("/status", handleStatus);');
   buffer.writeln('  server.on("/control", handleControl);');
+  buffer.writeln('  server.on("/thresholds", handleThresholds);  // Threshold endpoint');
   buffer.writeln('  server.begin();');
   buffer.writeln('  Serial.println("HTTP server started");');
   buffer.writeln('}');
@@ -902,10 +909,34 @@ String generateArduinoCode() {
       final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
       buffer.writeln('  ${i == 0 ? '' : 'else '}if (deviceId == $i) {  // ${device.name}');
       buffer.writeln('    if (action == "on") {');
-      buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, HIGH);');
+      
+      // For lights with PWM support (brightness)
+      if (device.type == DeviceType.light) {
+        buffer.writeln('      int brightness = server.hasArg("brightness") ? server.arg("brightness").toInt() : 100;');
+        buffer.writeln('      int pwmValue = map(brightness, 0, 100, 0, 1023);');
+        buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, pwmValue);');
+      } 
+      // For fans with speed control
+      else if (device.type == DeviceType.fan) {
+        buffer.writeln('      int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 3;');
+        buffer.writeln('      int pwmValue = map(speed, 1, 5, 204, 1023);  // 20%-100%');
+        buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, pwmValue);');
+      } 
+      // For pumps and others - simple digital
+      else {
+        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, HIGH);');
+      }
+      
       buffer.writeln('      success = true;');
       buffer.writeln('    } else if (action == "off") {');
-      buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      
+      // Turn off (works for all types)
+      if (device.type == DeviceType.light || device.type == DeviceType.fan) {
+        buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, 0);');
+      } else {
+        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      }
+      
       buffer.writeln('      success = true;');
       buffer.writeln('    }');
       buffer.writeln('  }');
@@ -917,6 +948,30 @@ String generateArduinoCode() {
   buffer.writeln('    server.send(200, "application/json", "{\\"success\\":true}");');
   buffer.writeln('  } else {');
   buffer.writeln('    server.send(400, "application/json", "{\\"success\\":false,\\"error\\":\\"Invalid device or action\\"}");');
+  buffer.writeln('  }');
+  buffer.writeln('}');
+  buffer.writeln();
+  
+  buffer.writeln('void handleThresholds() {');
+  buffer.writeln('  if (server.method() == HTTP_GET) {');
+  buffer.writeln('    // Return current thresholds');
+  buffer.writeln('    StaticJsonDocument<128> doc;');
+  buffer.writeln('    doc["min"] = currentPumpMin;');
+  buffer.writeln('    doc["max"] = currentPumpMax;');
+  buffer.writeln('    doc["emergency"] = EMERGENCY_STOP_LEVEL;');
+  buffer.writeln('    String output;');
+  buffer.writeln('    serializeJson(doc, output);');
+  buffer.writeln('    server.send(200, "application/json", output);');
+  buffer.writeln('  } else if (server.method() == HTTP_POST) {');
+  buffer.writeln('    // Update thresholds');
+  buffer.writeln('    if (server.hasArg("min") && server.hasArg("max")) {');
+  buffer.writeln('      currentPumpMin = server.arg("min").toInt();');
+  buffer.writeln('      currentPumpMax = server.arg("max").toInt();');
+  buffer.writeln('      Serial.println("Thresholds updated: Min=" + String(currentPumpMin) + "%, Max=" + String(currentPumpMax) + "%");');
+  buffer.writeln('      server.send(200, "application/json", "{\\"success\\":true}");');
+  buffer.writeln('    } else {');
+  buffer.writeln('      server.send(400, "application/json", "{\\"error\\":\\"Missing parameters\\"}");');
+  buffer.writeln('    }');
   buffer.writeln('  }');
   buffer.writeln('}');
   buffer.writeln();
