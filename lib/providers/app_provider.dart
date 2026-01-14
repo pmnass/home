@@ -262,8 +262,8 @@ class AppProvider extends ChangeNotifier {
     if (device.hasBattery && device.batteryLevel != null) {
       _devices[i] = _devices[i].copyWith(
         batteryLevel: (device.batteryLevel! - random.nextInt(2))
-            .clamp(0, 100)
-            .toDouble(),
+            .clamp(0, 100),
+            
       );
     }
   }
