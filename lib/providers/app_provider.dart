@@ -273,22 +273,7 @@ class AppProvider extends ChangeNotifier {
 }
 
 // Sync
-  Future<void> syncDevices() async {
-  _isSyncing = true;
-  _syncProgress = 0;
-  notifyListeners();
-  
-  // ... simulation code with random.nextDouble() ...
-  
-  _isSyncing = false;
-  _saveToStorage();
-  notifyListeners();
-}
-*/
-
-// REPLACE WITH THIS NEW VERSION:
-
-Future<void> syncDevices() async {
+   Future<void> syncDevices() async {
   _isSyncing = true;
   _syncProgress = 0;
   notifyListeners();
