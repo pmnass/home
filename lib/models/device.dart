@@ -49,7 +49,7 @@ extension DeviceTypeExtension on DeviceType {
       case DeviceType.light:
         return const Color(0xFFFFEB3B);
       case DeviceType.fan:
-        return const Color(0x00BCD4);
+        return const Color(0xFF00BCD4);
       case DeviceType.waterPump:
         return const Color(0xFF2196F3);
       case DeviceType.gasSensor:
