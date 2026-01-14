@@ -169,10 +169,17 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                       ),
                       if (device.gpioPin != null)
                         _InfoRow(
-                          icon: Icons.memory,
-                          label: 'GPIO Pin',
-                          value: '${device.gpioPin}',
+                          icon: Icons.settings_input_component,
+                          label: 'Control Pin',
+                          value: 'GPIO ${device.gpioPin}',
                           color: AppTheme.neonAmber,
+                        ),
+                      if (device.statusPin != null)
+                        _InfoRow(
+                          icon: Icons.sensors,
+                          label: 'Status Pin',
+                          value: 'GPIO ${device.statusPin}',
+                          color: AppTheme.neonCyan,
                         ),
                       _InfoRow(
                         icon: device.isOnline
@@ -391,8 +398,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final nameController = TextEditingController(text: device.name);
     final ipController = TextEditingController(text: device.ipAddress);
-    final gpioController =
-        TextEditingController(text: device.gpioPin?.toString() ?? '');
+    final gpioController = TextEditingController(text: device.gpioPin?.toString() ?? '');
+    final statusGpioController = TextEditingController(text: device.statusPin?.toString() ?? '');  // NEW
 
     showDialog(
       context: context,
@@ -432,11 +439,33 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               TextField(
                 controller: gpioController,
                 decoration: const InputDecoration(
-                  labelText: 'GPIO Pin (optional)',
-                  prefixIcon: Icon(Icons.memory),
+                  labelText: 'Control GPIO Pin (optional)',
+                  prefixIcon: Icon(Icons.settings_input_component),
+                  helperText: 'Pin to control device',
                 ),
                 keyboardType: TextInputType.number,
               ),
+              // Status GPIO Pin - only show for devices that need it
+              if (device.shouldHaveStatusPin) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: statusGpioController,
+                  decoration: InputDecoration(
+                    labelText: 'Status GPIO Pin (optional)',
+                    prefixIcon: const Icon(Icons.sensors),
+                    helperText: 'Pin to read device state',
+                    suffixIcon: Tooltip(
+                      message: 'Detects manual switch operations',
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: isDark ? AppTheme.neonCyan : Colors.blue,
+                      ),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
             ],
           ),
         ),
@@ -455,11 +484,22 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 return;
               }
 
+              // Validate pins are different
+              final controlPin = int.tryParse(gpioController.text);
+              final statusPin = int.tryParse(statusGpioController.text);
+              if (controlPin != null && statusPin != null && controlPin == statusPin) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Control and status pins must be different')),
+                );
+                return;
+              }
+
               final provider = context.read<AppProvider>();
               provider.updateDevice(device.copyWith(
                 name: nameController.text.trim(),
                 ipAddress: ipController.text.trim(),
                 gpioPin: int.tryParse(gpioController.text),
+                statusPin: int.tryParse(statusGpioController.text),  // NEW
               ));
 
               Navigator.pop(context);
