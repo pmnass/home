@@ -1054,99 +1054,104 @@ String generateArduinoCode() {
   }
 
   void _addDemoData() {
-    // Add demo rooms
-    _rooms = [
-      Room(id: _uuid.v4(), name: 'Living Room', type: RoomType.livingRoom),
-      Room(id: _uuid.v4(), name: 'Kitchen', type: RoomType.kitchen),
-      Room(id: _uuid.v4(), name: 'Bedroom', type: RoomType.bedroom),
-      Room(id: _uuid.v4(), name: 'Garage', type: RoomType.garage),
-    ];
+  // Add demo rooms
+  _rooms = [
+    Room(id: _uuid.v4(), name: 'Living Room', type: RoomType.livingRoom),
+    Room(id: _uuid.v4(), name: 'Kitchen', type: RoomType.kitchen),
+    Room(id: _uuid.v4(), name: 'Bedroom', type: RoomType.bedroom),
+    Room(id: _uuid.v4(), name: 'Garage', type: RoomType.garage),
+  ];
+  
+  // Add demo devices
+  _devices = [
+    Device(
+      id: _uuid.v4(),
+      name: 'Main Light',
+      type: DeviceType.light,
+      ipAddress: '192.168.1.101',
+      gpioPin: 5,
+      statusPin: 4,        // ADDED
+      roomId: _rooms[0].id,
+      isOnline: true,
+      isOn: true,
+      brightness: 80,
+    ),
+    Device(
+      id: _uuid.v4(),
+      name: 'Ceiling Fan',
+      type: DeviceType.fan,
+      ipAddress: '192.168.1.102',
+      gpioPin: 4,
+      statusPin: 3,        // ADDED
+      roomId: _rooms[0].id,
+      isOnline: true,
+      isOn: true,
+      fanSpeed: 3,
+    ),
+    Device(
+      id: _uuid.v4(),
+      name: 'Kitchen Light',
+      type: DeviceType.light,
+      ipAddress: '192.168.1.103',
+      gpioPin: 12,
+      statusPin: 11,       // ADDED
+      roomId: _rooms[1].id,
+      isOnline: true,
+      isOn: false,
+      brightness: 100,
+    ),
+    Device(
+      id: _uuid.v4(),
+      name: 'Water Tank',
+      type: DeviceType.waterPump,
+      ipAddress: '192.168.1.104',
+      gpioPin: 14,
+      statusPin: 13,       // ADDED
+      roomId: _rooms[3].id,
+      isOnline: true,
+      isOn: false,
+      waterLevel: 65,
+    ),
+    Device(
+      id: _uuid.v4(),
+      name: 'Gas Detector',
+      type: DeviceType.gasSensor,
+      ipAddress: '192.168.1.105',
+      // NO statusPin - gas sensors don't need it
+      roomId: _rooms[1].id,
+      isOnline: true,
+      lpgValue: 12.5,
+      coValue: 3.2,
+      hasBattery: true,
+      batteryLevel: 87,
+    ),
+    Device(
+      id: _uuid.v4(),
+      name: 'Bedroom Light',
+      type: DeviceType.light,
+      ipAddress: '192.168.1.106',
+      gpioPin: 13,
+      statusPin: 12,       // ADDED
+      roomId: _rooms[2].id,
+      isOnline: false,
+      isOn: false,
+      brightness: 50,
+    ),
+  ];
+  
+  // Add initial logs
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.info,
+    action: 'App initialized with demo data',
+  );
+}
 
-    // Add demo devices
-    _devices = [
-      Device(
-        id: _uuid.v4(),
-        name: 'Main Light',
-        type: DeviceType.light,
-        ipAddress: '192.168.1.101',
-        gpioPin: 5,
-        roomId: _rooms[0].id,
-        isOnline: true,
-        isOn: true,
-        brightness: 80,
-      ),
-      Device(
-        id: _uuid.v4(),
-        name: 'Ceiling Fan',
-        type: DeviceType.fan,
-        ipAddress: '192.168.1.102',
-        gpioPin: 4,
-        roomId: _rooms[0].id,
-        isOnline: true,
-        isOn: true,
-        fanSpeed: 3,
-      ),
-      Device(
-        id: _uuid.v4(),
-        name: 'Kitchen Light',
-        type: DeviceType.light,
-        ipAddress: '192.168.1.103',
-        gpioPin: 12,
-        roomId: _rooms[1].id,
-        isOnline: true,
-        isOn: false,
-        brightness: 100,
-      ),
-      Device(
-        id: _uuid.v4(),
-        name: 'Water Tank',
-        type: DeviceType.waterPump,
-        ipAddress: '192.168.1.104',
-        gpioPin: 14,
-        roomId: _rooms[3].id,
-        isOnline: true,
-        isOn: false,
-        waterLevel: 65,
-      ),
-      Device(
-        id: _uuid.v4(),
-        name: 'Gas Detector',
-        type: DeviceType.gasSensor,
-        ipAddress: '192.168.1.105',
-        roomId: _rooms[1].id,
-        isOnline: true,
-        lpgValue: 12.5,
-        coValue: 3.2,
-        hasBattery: true,
-        batteryLevel: 87,
-      ),
-      Device(
-        id: _uuid.v4(),
-        name: 'Bedroom Light',
-        type: DeviceType.light,
-        ipAddress: '192.168.1.106',
-        gpioPin: 13,
-        roomId: _rooms[2].id,
-        isOnline: false,
-        isOn: false,
-        brightness: 50,
-      ),
-    ];
+String generateUuid() => _uuid.v4();
 
-    // Add initial logs
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.info,
-      action: 'App initialized with demo data',
-    );
-  }
-
-  String generateUuid() => _uuid.v4();
-
-  @override
-  void dispose() {
-    _simulationTimer?.cancel();
-    super.dispose();
-  }
+@override
+void dispose() {
+  _simulationTimer?.cancel();
+  super.dispose();
 }
