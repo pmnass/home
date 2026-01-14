@@ -287,7 +287,6 @@ class AppProvider extends ChangeNotifier {
 
   final totalDevices = _devices.length;
   int onlineCount = 0;
-  int updatedCount = 0;
   int manualOverrideCount = 0;
 
   for (int i = 0; i < _devices.length; i++) {
@@ -347,7 +346,6 @@ class AppProvider extends ChangeNotifier {
             );
             
             onlineCount++;
-            updatedCount++;
           } else {
             // Device found but not in response
             _devices[i] = device.copyWith(
