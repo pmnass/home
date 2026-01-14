@@ -277,6 +277,21 @@ class AppProvider extends ChangeNotifier {
   _isSyncing = true;
   _syncProgress = 0;
   notifyListeners();
+  
+  // ... simulation code with random.nextDouble() ...
+  
+  _isSyncing = false;
+  _saveToStorage();
+  notifyListeners();
+}
+*/
+
+// REPLACE WITH THIS NEW VERSION:
+
+Future<void> syncDevices() async {
+  _isSyncing = true;
+  _syncProgress = 0;
+  notifyListeners();
 
   _addLog(
     deviceId: 'system',
@@ -395,7 +410,7 @@ class AppProvider extends ChangeNotifier {
       );
     }
 
-    _syncProgress = (i + 1) / totalDevices;
+    _syncProgress = (i + 1).toDouble() / totalDevices;
     notifyListeners();
     
     // Small delay between requests to avoid overwhelming network
