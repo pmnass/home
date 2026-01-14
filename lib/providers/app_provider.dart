@@ -9,7 +9,7 @@ import '../models/device.dart';
 import '../models/room.dart';
 import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
-
+import 'package:http/http.dart' as http;
 enum AppMode { remote, localAuto }
 
 class AppProvider extends ChangeNotifier {
@@ -270,59 +270,121 @@ class AppProvider extends ChangeNotifier {
   notifyListeners();
 }
 
-
-
-  // Sync
+// Sync
   Future<void> syncDevices() async {
-    _isSyncing = true;
-    _syncProgress = 0;
-    notifyListeners();
+  _isSyncing = true;
+  _syncProgress = 0;
+  notifyListeners();
 
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.sync,
-      action: 'Device sync started',
-    );
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.sync,
+    action: 'Device sync started',
+  );
 
-    // Simulate 10-20 second sync window
-    final totalDevices = _devices.length;
-    final delayPerDevice = totalDevices > 0
-        ? (15000 / totalDevices).round()
-        : 1000;
+  final totalDevices = _devices.length;
+  int onlineCount = 0;
+  int updatedCount = 0;
 
-    for (int i = 0; i < _devices.length; i++) {
-      await Future.delayed(Duration(milliseconds: delayPerDevice));
-
-      // Simulate fetching device status
-      final random = math.Random();
-      _devices[i] = _devices[i].copyWith(
-        isOnline: random.nextDouble() > 0.15,
-        lastSeen: DateTime.now(),
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    
+    try {
+      // Make real HTTP request to device
+      final response = await http.get(
+        Uri.parse('http://${device.ipAddress}/status'),
+      ).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => throw TimeoutException('Device timeout'),
       );
 
-      _syncProgress = (i + 1) / totalDevices;
-      notifyListeners();
+      if (response.statusCode == 200) {
+        // Parse JSON response
+        final data = jsonDecode(response.body);
+        
+        // Find this device in the response
+        if (data['devices'] != null && data['devices'] is List) {
+          final deviceData = (data['devices'] as List).firstWhere(
+            (d) => d['name'] == device.name,
+            orElse: () => null,
+          );
+          
+          if (deviceData != null) {
+            // Update device with real status
+            bool actualIsOn = deviceData['isOn'] ?? device.isOn;
+            
+            // Check if manual override detected
+            if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
+              _addLog(
+                deviceId: device.id,
+                deviceName: device.name,
+                type: LogType.info,
+                action: 'Manual override detected',
+                details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
+              );
+              
+              // Show notification for manual changes
+              if (_notificationsEnabled && device.notificationsEnabled) {
+                NotificationHelper.showDeviceStatusChange(
+                  deviceName: device.name,
+                  isOn: actualIsOn,
+                  reason: 'Manual override detected',
+                );
+              }
+            }
+            
+            _devices[i] = device.copyWith(
+              isOnline: true,
+              isOn: actualIsOn,
+              lastSeen: DateTime.now(),
+            );
+            
+            onlineCount++;
+            updatedCount++;
+          }
+        }
+      } else {
+        // Device responded but with error
+        _devices[i] = device.copyWith(
+          isOnline: false,
+          lastSeen: DateTime.now(),
+        );
+      }
+    } catch (e) {
+      // Device unreachable
+      _devices[i] = device.copyWith(
+        isOnline: false,
+      );
+      
+      _addLog(
+        deviceId: device.id,
+        deviceName: device.name,
+        type: LogType.error,
+        action: 'Sync failed',
+        details: e.toString(),
+      );
     }
 
-    if (_devices.isEmpty) {
-      await Future.delayed(const Duration(seconds: 2));
-      _syncProgress = 1.0;
-    }
-
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.sync,
-      action: 'Device sync completed',
-      details:
-          '${onlineDevices.length}/${_devices.length} devices online',
-    );
-
-    _isSyncing = false;
-    _saveToStorage();
+    _syncProgress = (i + 1) / totalDevices;
     notifyListeners();
+    
+    // Small delay between requests to avoid overwhelming network
+    await Future.delayed(const Duration(milliseconds: 200));
   }
+
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.sync,
+    action: 'Device sync completed',
+    details: '$onlineCount/$totalDevices devices online, $updatedCount updated',
+  );
+
+  _isSyncing = false;
+  _saveToStorage();
+  notifyListeners();
+}
 
   // Master Switch
   Future<bool> masterSwitch(String key, bool turnOn) async {
