@@ -614,158 +614,263 @@ class AppProvider extends ChangeNotifier {
   }
 
   // Arduino Code Generation
-  String generateArduinoCode() {
-    final buffer = StringBuffer();
+  // Updated generateArduinoCode() method for app_provider.dart
 
-    buffer.writeln('/*');
-    buffer.writeln(' * $appName - Arduino/ESP Device Controller');
-    buffer.writeln(' * Generated: ${DateTime.now().toIso8601String()}');
-    buffer.writeln(' * Devices: ${_devices.length}');
-    buffer.writeln(' */');
-    buffer.writeln();
-    buffer.writeln('#include <ESP8266WiFi.h>');
-    buffer.writeln('#include <ESP8266WebServer.h>');
-    buffer.writeln();
-    buffer.writeln('// ========== WIFI CONFIGURATION ==========');
-    if (_wifiNetworks.isNotEmpty) {
-      buffer.writeln(
-          'const char* WIFI_SSID = "${_wifiNetworks.first.ssid}";');
-      buffer.writeln(
-          'const char* WIFI_PASSWORD = "${_encryptionEnabled ? '********' : _wifiNetworks.first.password}";');
-    } else {
-      buffer.writeln('const char* WIFI_SSID = "YOUR_WIFI_SSID";');
-      buffer.writeln('const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";');
-    }
-    buffer.writeln();
-    buffer.writeln('// ========== THRESHOLD CONFIGURATION ==========');
-    buffer.writeln('const int PUMP_MIN_THRESHOLD = $_pumpMinThreshold;');
-    buffer.writeln('const int PUMP_MAX_THRESHOLD = $_pumpMaxThreshold;');
-    buffer.writeln('const int EMERGENCY_STOP_LEVEL = $emergencyStopLevel;');
-    buffer.writeln();
-    buffer.writeln('// ========== DEVICE CONFIGURATION ==========');
+String generateArduinoCode() {
+  final buffer = StringBuffer();
 
-    for (final device in _devices) {
-      buffer.writeln();
-      buffer.writeln('// ${device.name} (${device.type.displayName})');
-      buffer.writeln(
-          'const char* DEVICE_${device.id.toUpperCase().replaceAll('-', '_')}_NAME = "${device.name}";');
-      buffer.writeln(
-          'const char* DEVICE_${device.id.toUpperCase().replaceAll('-', '_')}_IP = "${device.ipAddress}";');
-      if (device.gpioPin != null) {
-        buffer.writeln(
-            'const int DEVICE_${device.id.toUpperCase().replaceAll('-', '_')}_GPIO = ${device.gpioPin};');
-      }
-    }
-
-    buffer.writeln();
-    buffer.writeln('// ========== GPIO PIN DEFINITIONS ==========');
-    for (final device in _devices) {
-      if (device.gpioPin != null) {
-        buffer.writeln(
-            '#define PIN_${device.name.toUpperCase().replaceAll(' ', '_')} ${device.gpioPin}');
-      }
-    }
-
-    buffer.writeln();
-    buffer.writeln('// ========== SERVER SETUP ==========');
-    buffer.writeln('ESP8266WebServer server(80);');
-    buffer.writeln();
-    buffer.writeln('void setup() {');
-    buffer.writeln('  Serial.begin(115200);');
-    buffer.writeln('  ');
-    buffer.writeln('  // Initialize GPIO pins');
-    for (final device in _devices) {
-      if (device.gpioPin != null) {
-        buffer.writeln(
-            '  pinMode(PIN_${device.name.toUpperCase().replaceAll(' ', '_')}, OUTPUT);');
-      }
-    }
-    buffer.writeln('  ');
-    buffer.writeln('  // Connect to WiFi');
-    buffer.writeln('  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);');
-    buffer.writeln('  while (WiFi.status() != WL_CONNECTED) {');
-    buffer.writeln('    delay(500);');
-    buffer.writeln('    Serial.print(".");');
-    buffer.writeln('  }');
-    buffer.writeln('  Serial.println("");');
-    buffer.writeln('  Serial.print("Connected! IP: ");');
-    buffer.writeln('  Serial.println(WiFi.localIP());');
-    buffer.writeln('  ');
-    buffer.writeln('  // Setup HTTP routes');
-    buffer.writeln('  server.on("/status", handleStatus);');
-    buffer.writeln('  server.on("/control", handleControl);');
-    buffer.writeln('  server.begin();');
-    buffer.writeln('}');
-    buffer.writeln();
-    buffer.writeln('void loop() {');
-    buffer.writeln('  server.handleClient();');
-
-    // Add pump auto logic
-    final pumps =
-        _devices.where((d) => d.type == DeviceType.waterPump).toList();
-    if (pumps.isNotEmpty) {
-      buffer.writeln('  ');
-      buffer.writeln('  // Pump auto-control logic');
-      buffer.writeln('  checkWaterLevels();');
-    }
-
-    buffer.writeln('}');
-    buffer.writeln();
-    buffer.writeln('void handleStatus() {');
-    buffer.writeln('  String json = "{";');
-    buffer.writeln('  json += "\\"online\\": true,";');
-    buffer.writeln('  json += "\\"devices\\": [";');
-    buffer.writeln('  // Add device statuses here');
-    buffer.writeln('  json += "]";');
-    buffer.writeln('  json += "}";');
-    buffer.writeln('  server.send(200, "application/json", json);');
-    buffer.writeln('}');
-    buffer.writeln();
-    buffer.writeln('void handleControl() {');
-    buffer.writeln('  String device = server.arg("device");');
-    buffer.writeln('  String action = server.arg("action");');
-    buffer.writeln('  // Implement device control logic');
-    buffer.writeln('  server.send(200, "application/json", "{\\"success\\": true}");');
-    buffer.writeln('}');
-
-    if (pumps.isNotEmpty) {
-      buffer.writeln();
-      buffer.writeln('void checkWaterLevels() {');
-      buffer.writeln('  int waterLevel = analogRead(A0);');
-      buffer.writeln('  int percentage = map(waterLevel, 0, 1024, 0, 100);');
-      buffer.writeln('  ');
-      buffer.writeln('  // Emergency stop');
-      buffer.writeln('  if (percentage >= EMERGENCY_STOP_LEVEL) {');
-      for (final pump in pumps) {
-        if (pump.gpioPin != null) {
-          buffer.writeln(
-              '    digitalWrite(PIN_${pump.name.toUpperCase().replaceAll(' ', '_')}, LOW);');
-        }
-      }
-      buffer.writeln('    return;');
-      buffer.writeln('  }');
-      buffer.writeln('  ');
-      buffer.writeln('  // Auto control based on thresholds');
-      buffer.writeln('  if (percentage <= PUMP_MIN_THRESHOLD) {');
-      for (final pump in pumps) {
-        if (pump.gpioPin != null) {
-          buffer.writeln(
-              '    digitalWrite(PIN_${pump.name.toUpperCase().replaceAll(' ', '_')}, HIGH);');
-        }
-      }
-      buffer.writeln('  } else if (percentage >= PUMP_MAX_THRESHOLD) {');
-      for (final pump in pumps) {
-        if (pump.gpioPin != null) {
-          buffer.writeln(
-              '    digitalWrite(PIN_${pump.name.toUpperCase().replaceAll(' ', '_')}, LOW);');
-        }
-      }
-      buffer.writeln('  }');
-      buffer.writeln('}');
-    }
-
-    return buffer.toString();
+  buffer.writeln('/*');
+  buffer.writeln(' * $appName - Arduino/ESP Device Controller');
+  buffer.writeln(' * Generated: ${DateTime.now().toIso8601String()}');
+  buffer.writeln(' * Devices: ${_devices.length}');
+  buffer.writeln(' */');
+  buffer.writeln();
+  buffer.writeln('#include <ESP8266WiFi.h>');
+  buffer.writeln('#include <ESP8266WebServer.h>');
+  buffer.writeln('#include <ArduinoJson.h>');
+  buffer.writeln();
+  
+  buffer.writeln('// ========== WIFI CONFIGURATION ==========');
+  if (_wifiNetworks.isNotEmpty) {
+    buffer.writeln('const char* WIFI_SSID = "${_wifiNetworks.first.ssid}";');
+    buffer.writeln('const char* WIFI_PASSWORD = "${_encryptionEnabled ? '********' : _wifiNetworks.first.password}";');
+  } else {
+    buffer.writeln('const char* WIFI_SSID = "YOUR_WIFI_SSID";');
+    buffer.writeln('const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";');
   }
+  buffer.writeln();
+  
+  buffer.writeln('// ========== THRESHOLD CONFIGURATION ==========');
+  buffer.writeln('const int PUMP_MIN_THRESHOLD = $_pumpMinThreshold;');
+  buffer.writeln('const int PUMP_MAX_THRESHOLD = $_pumpMaxThreshold;');
+  buffer.writeln('const int EMERGENCY_STOP_LEVEL = $emergencyStopLevel;');
+  buffer.writeln();
+  
+  buffer.writeln('// ========== DEVICE CONFIGURATION ==========');
+  
+  // Create device configurations
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    final devId = 'DEV_$i';
+    
+    buffer.writeln();
+    buffer.writeln('// Device $i: ${device.name} (${device.type.displayName})');
+    buffer.writeln('const char* ${devId}_NAME = "${device.name}";');
+    buffer.writeln('const char* ${devId}_TYPE = "${device.type.displayName}";');
+    buffer.writeln('const char* ${devId}_IP = "${device.ipAddress}";');
+    if (device.gpioPin != null) {
+      buffer.writeln('const int ${devId}_GPIO = ${device.gpioPin};');
+    }
+    if (device.statusPin != null && device.shouldHaveStatusPin) {
+      buffer.writeln('const int ${devId}_STATUS = ${device.statusPin};');
+    }
+  }
+
+  buffer.writeln();
+  buffer.writeln('// ========== CONTROL GPIO PIN DEFINITIONS ==========');
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.gpioPin != null) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('#define CONTROL_PIN_$pinName ${device.gpioPin}  // Device $i');
+    }
+  }
+
+  buffer.writeln();
+  buffer.writeln('// ========== STATUS GPIO PIN DEFINITIONS ==========');
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.statusPin != null && device.shouldHaveStatusPin) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('#define STATUS_PIN_$pinName ${device.statusPin}  // Device $i');
+    }
+  }
+
+  buffer.writeln();
+  buffer.writeln('// ========== SERVER SETUP ==========');
+  buffer.writeln('ESP8266WebServer server(80);');
+  buffer.writeln();
+  
+  buffer.writeln('void setup() {');
+  buffer.writeln('  Serial.begin(115200);');
+  buffer.writeln('  Serial.println("\\n$appName Starting...");');
+  buffer.writeln('  ');
+  buffer.writeln('  // Initialize Control GPIO pins (OUTPUT)');
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.gpioPin != null) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('  pinMode(CONTROL_PIN_$pinName, OUTPUT);');
+      buffer.writeln('  digitalWrite(CONTROL_PIN_$pinName, LOW);');
+    }
+  }
+  
+  buffer.writeln('  ');
+  buffer.writeln('  // Initialize Status GPIO pins (INPUT)');
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.statusPin != null && device.shouldHaveStatusPin) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('  pinMode(STATUS_PIN_$pinName, INPUT);');
+    }
+  }
+  
+  buffer.writeln('  ');
+  buffer.writeln('  // Connect to WiFi');
+  buffer.writeln('  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);');
+  buffer.writeln('  Serial.print("Connecting to WiFi");');
+  buffer.writeln('  while (WiFi.status() != WL_CONNECTED) {');
+  buffer.writeln('    delay(500);');
+  buffer.writeln('    Serial.print(".");');
+  buffer.writeln('  }');
+  buffer.writeln('  Serial.println("");');
+  buffer.writeln('  Serial.print("Connected! IP: ");');
+  buffer.writeln('  Serial.println(WiFi.localIP());');
+  buffer.writeln('  ');
+  buffer.writeln('  // Setup HTTP routes');
+  buffer.writeln('  server.on("/status", handleStatus);');
+  buffer.writeln('  server.on("/control", handleControl);');
+  buffer.writeln('  server.begin();');
+  buffer.writeln('  Serial.println("HTTP server started");');
+  buffer.writeln('}');
+  buffer.writeln();
+  
+  buffer.writeln('void loop() {');
+  buffer.writeln('  server.handleClient();');
+
+  // Add pump auto logic
+  final pumps = _devices.where((d) => d.type == DeviceType.waterPump).toList();
+  if (pumps.isNotEmpty) {
+    buffer.writeln('  ');
+    buffer.writeln('  // Pump auto-control logic');
+    buffer.writeln('  checkWaterLevels();');
+  }
+
+  buffer.writeln('}');
+  buffer.writeln();
+  
+  buffer.writeln('void handleStatus() {');
+  buffer.writeln('  StaticJsonDocument<1024> doc;');
+  buffer.writeln('  doc["online"] = true;');
+  buffer.writeln('  doc["ip"] = WiFi.localIP().toString();');
+  buffer.writeln('  ');
+  buffer.writeln('  JsonArray devices = doc.createNestedArray("devices");');
+  buffer.writeln('  ');
+  
+  // Add device status reading
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.statusPin != null && device.shouldHaveStatusPin) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('  // Device $i: ${device.name}');
+      buffer.writeln('  {');
+      buffer.writeln('    JsonObject dev$i = devices.createNestedObject();');
+      buffer.writeln('    dev$i["id"] = $i;');
+      buffer.writeln('    dev$i["name"] = "${device.name}";');
+      buffer.writeln('    dev$i["type"] = "${device.type.displayName}";');
+      buffer.writeln('    dev$i["isOn"] = digitalRead(STATUS_PIN_$pinName) == HIGH;');
+      buffer.writeln('  }');
+    } else if (device.type == DeviceType.gasSensor) {
+      buffer.writeln('  // Device $i: ${device.name} (Gas Sensor - no status pin)');
+      buffer.writeln('  {');
+      buffer.writeln('    JsonObject dev$i = devices.createNestedObject();');
+      buffer.writeln('    dev$i["id"] = $i;');
+      buffer.writeln('    dev$i["name"] = "${device.name}";');
+      buffer.writeln('    dev$i["type"] = "Gas Sensor";');
+      buffer.writeln('    dev$i["lpg"] = 0;  // Read from sensor');
+      buffer.writeln('    dev$i["co"] = 0;   // Read from sensor');
+      buffer.writeln('  }');
+    }
+  }
+  
+  buffer.writeln('  ');
+  buffer.writeln('  String output;');
+  buffer.writeln('  serializeJson(doc, output);');
+  buffer.writeln('  server.send(200, "application/json", output);');
+  buffer.writeln('}');
+  buffer.writeln();
+  
+  buffer.writeln('void handleControl() {');
+  buffer.writeln('  if (!server.hasArg("device") || !server.hasArg("action")) {');
+  buffer.writeln('    server.send(400, "application/json", "{\\"error\\":\\"Missing parameters\\"}");');
+  buffer.writeln('    return;');
+  buffer.writeln('  }');
+  buffer.writeln('  ');
+  buffer.writeln('  int deviceId = server.arg("device").toInt();');
+  buffer.writeln('  String action = server.arg("action");');
+  buffer.writeln('  bool success = false;');
+  buffer.writeln('  ');
+  buffer.writeln('  // Device control logic');
+  
+  for (int i = 0; i < _devices.length; i++) {
+    final device = _devices[i];
+    if (device.gpioPin != null && device.shouldHaveStatusPin) {
+      final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+      buffer.writeln('  ${i == 0 ? '' : 'else '}if (deviceId == $i) {  // ${device.name}');
+      buffer.writeln('    if (action == "on") {');
+      buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, HIGH);');
+      buffer.writeln('      success = true;');
+      buffer.writeln('    } else if (action == "off") {');
+      buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      buffer.writeln('      success = true;');
+      buffer.writeln('    }');
+      buffer.writeln('  }');
+    }
+  }
+  
+  buffer.writeln('  ');
+  buffer.writeln('  if (success) {');
+  buffer.writeln('    server.send(200, "application/json", "{\\"success\\":true}");');
+  buffer.writeln('  } else {');
+  buffer.writeln('    server.send(400, "application/json", "{\\"success\\":false,\\"error\\":\\"Invalid device or action\\"}");');
+  buffer.writeln('  }');
+  buffer.writeln('}');
+  buffer.writeln();
+
+  if (pumps.isNotEmpty) {
+    buffer.writeln('void checkWaterLevels() {');
+    buffer.writeln('  static unsigned long lastCheck = 0;');
+    buffer.writeln('  if (millis() - lastCheck < 5000) return;  // Check every 5 seconds');
+    buffer.writeln('  lastCheck = millis();');
+    buffer.writeln('  ');
+    buffer.writeln('  int waterLevel = analogRead(A0);');
+    buffer.writeln('  int percentage = map(waterLevel, 0, 1024, 0, 100);');
+    buffer.writeln('  ');
+    buffer.writeln('  // Emergency stop');
+    buffer.writeln('  if (percentage >= EMERGENCY_STOP_LEVEL) {');
+    for (final pump in pumps) {
+      if (pump.gpioPin != null) {
+        final pinName = pump.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+        buffer.writeln('    digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      }
+    }
+    buffer.writeln('    Serial.println("EMERGENCY STOP: Water level at " + String(percentage) + "%");');
+    buffer.writeln('    return;');
+    buffer.writeln('  }');
+    buffer.writeln('  ');
+    buffer.writeln('  // Auto control based on thresholds');
+    buffer.writeln('  if (percentage <= PUMP_MIN_THRESHOLD) {');
+    for (final pump in pumps) {
+      if (pump.gpioPin != null) {
+        final pinName = pump.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+        buffer.writeln('    digitalWrite(CONTROL_PIN_$pinName, HIGH);');
+      }
+    }
+    buffer.writeln('    Serial.println("AUTO ON: Water level at " + String(percentage) + "%");');
+    buffer.writeln('  } else if (percentage >= PUMP_MAX_THRESHOLD) {');
+    for (final pump in pumps) {
+      if (pump.gpioPin != null) {
+        final pinName = pump.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
+        buffer.writeln('    digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      }
+    }
+    buffer.writeln('    Serial.println("AUTO OFF: Water level at " + String(percentage) + "%");');
+    buffer.writeln('  }');
+    buffer.writeln('}');
+  }
+
+  return buffer.toString();
+}
 
   // Storage
   Future<void> _loadFromStorage() async {
