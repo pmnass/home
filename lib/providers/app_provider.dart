@@ -11,6 +11,7 @@ import '../models/room.dart';
 import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
 import '../utils/notification_helper.dart';
+
 enum AppMode { remote, localAuto }
 
 class AppProvider extends ChangeNotifier {
