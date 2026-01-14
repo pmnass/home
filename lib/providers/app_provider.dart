@@ -5,11 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;  // ADD THIS LINE
 import '../models/device.dart';
 import '../models/room.dart';
 import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
-import 'package:http/http.dart' as http;
+import '../utils/notification_helper.dart';
 enum AppMode { remote, localAuto }
 
 class AppProvider extends ChangeNotifier {
@@ -286,6 +287,7 @@ class AppProvider extends ChangeNotifier {
   final totalDevices = _devices.length;
   int onlineCount = 0;
   int updatedCount = 0;
+  int manualOverrideCount = 0;
 
   for (int i = 0; i < _devices.length; i++) {
     final device = _devices[i];
@@ -311,11 +313,13 @@ class AppProvider extends ChangeNotifier {
           );
           
           if (deviceData != null) {
-            // Update device with real status
+            // Get actual device state from GPIO
             bool actualIsOn = deviceData['isOn'] ?? device.isOn;
             
-            // Check if manual override detected
+            // Check if manual override detected (only for devices with status pin)
             if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
+              manualOverrideCount++;
+              
               _addLog(
                 deviceId: device.id,
                 deviceName: device.name,
@@ -334,6 +338,7 @@ class AppProvider extends ChangeNotifier {
               }
             }
             
+            // Update device with real status
             _devices[i] = device.copyWith(
               isOnline: true,
               isOn: actualIsOn,
@@ -342,7 +347,21 @@ class AppProvider extends ChangeNotifier {
             
             onlineCount++;
             updatedCount++;
+          } else {
+            // Device found but not in response
+            _devices[i] = device.copyWith(
+              isOnline: true,
+              lastSeen: DateTime.now(),
+            );
+            onlineCount++;
           }
+        } else {
+          // Response format unexpected
+          _devices[i] = device.copyWith(
+            isOnline: true,
+            lastSeen: DateTime.now(),
+          );
+          onlineCount++;
         }
       } else {
         // Device responded but with error
@@ -351,11 +370,20 @@ class AppProvider extends ChangeNotifier {
           lastSeen: DateTime.now(),
         );
       }
-    } catch (e) {
-      // Device unreachable
-      _devices[i] = device.copyWith(
-        isOnline: false,
+    } on TimeoutException {
+      // Device timeout
+      _devices[i] = device.copyWith(isOnline: false);
+      
+      _addLog(
+        deviceId: device.id,
+        deviceName: device.name,
+        type: LogType.error,
+        action: 'Sync timeout',
+        details: 'Device did not respond within 3 seconds',
       );
+    } catch (e) {
+      // Device unreachable or other error
+      _devices[i] = device.copyWith(isOnline: false);
       
       _addLog(
         deviceId: device.id,
@@ -373,12 +401,17 @@ class AppProvider extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 200));
   }
 
+  String syncSummary = '$onlineCount/$totalDevices online';
+  if (manualOverrideCount > 0) {
+    syncSummary += ', $manualOverrideCount manual override${manualOverrideCount > 1 ? 's' : ''}';
+  }
+
   _addLog(
     deviceId: 'system',
     deviceName: 'System',
     type: LogType.sync,
     action: 'Device sync completed',
-    details: '$onlineCount/$totalDevices devices online, $updatedCount updated',
+    details: syncSummary,
   );
 
   _isSyncing = false;
