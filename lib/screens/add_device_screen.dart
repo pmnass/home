@@ -21,6 +21,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   final _nameController = TextEditingController();
   final _ipController = TextEditingController();
   final _gpioController = TextEditingController();
+  final _statusGpioController = TextEditingController();  // NEW
 
   DeviceType _selectedType = DeviceType.light;
   String? _selectedRoomId;
@@ -37,6 +38,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     _nameController.dispose();
     _ipController.dispose();
     _gpioController.dispose();
+    _statusGpioController.dispose();  // NEW
     super.dispose();
   }
 
@@ -236,7 +238,131 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Optional fields
+                  // GPIO Configuration
+                  GlassCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'GPIO Configuration',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Control GPIO Pin
+                        TextFormField(
+                          controller: _gpioController,
+                          decoration: InputDecoration(
+                            labelText: 'Control GPIO Pin',
+                            prefixIcon: const Icon(Icons.settings_input_component),
+                            hintText: 'e.g., 13',
+                            helperText: 'Pin to control device (OUTPUT)',
+                            helperStyle: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white38 : Colors.black45,
+                            ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (_selectedType == DeviceType.gasSensor || 
+                                _selectedType == DeviceType.sensorOnly) {
+                              return null; // Optional for sensors
+                            }
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Control pin required for ${_selectedType.displayName}';
+                            }
+                            final pin = int.tryParse(value);
+                            if (pin == null || pin < 0 || pin > 16) {
+                              return 'Pin must be 0-16';
+                            }
+                            return null;
+                          },
+                        ),
+                        
+                        // Status GPIO Pin - Only show for devices that need it
+                        if (_selectedType.needsStatusPin) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _statusGpioController,
+                            decoration: InputDecoration(
+                              labelText: 'Status GPIO Pin (Optional)',
+                              prefixIcon: const Icon(Icons.sensors),
+                              hintText: 'e.g., 12',
+                              helperText: 'Pin to read actual device state (INPUT)',
+                              helperStyle: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white38 : Colors.black45,
+                              ),
+                              suffixIcon: Tooltip(
+                                message: 'Reads physical switch state for manual override detection',
+                                child: Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: isDark ? AppTheme.neonCyan : Colors.blue,
+                                ),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return null; // Optional
+                              }
+                              final statusPin = int.tryParse(value);
+                              if (statusPin == null || statusPin < 0 || statusPin > 16) {
+                                return 'Pin must be 0-16';
+                              }
+                              
+                              // Check if different from control pin
+                              final controlPin = int.tryParse(_gpioController.text);
+                              if (controlPin != null && statusPin == controlPin) {
+                                return 'Must differ from control pin';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppTheme.neonCyan : Colors.blue)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: (isDark ? AppTheme.neonCyan : Colors.blue)
+                                    .withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  size: 16,
+                                  color: isDark ? AppTheme.neonCyan : Colors.blue,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Status pin enables detection of manual switch operations',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark ? AppTheme.neonCyan : Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Optional settings
                   GlassCard(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -250,28 +376,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // GPIO Pin
-                        TextFormField(
-                          controller: _gpioController,
-                          decoration: const InputDecoration(
-                            labelText: 'GPIO Pin',
-                            prefixIcon: Icon(Icons.memory),
-                            hintText: 'e.g., 5',
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        // NEW: Status GPIO Pin field
-TextField(
-  controller: statusGpioPinController,  // Add this controller
-  decoration: const InputDecoration(
-    labelText: 'Status GPIO Pin (Optional - Reads Switch)',
-    hintText: 'e.g., 1 (leave empty if not used)',
-    prefixIcon: Icon(Icons.sensors),
-    helperText: 'For reading physical switch state',
-  ),
-  keyboardType: TextInputType.number,
-),
+                        
                         // Room selection
                         DropdownButtonFormField<String?>(
                           value: _selectedRoomId,
@@ -308,6 +413,7 @@ TextField(
                           },
                         ),
                         const SizedBox(height: 16),
+                        
                         // Battery toggle
                         Row(
                           children: [
@@ -398,19 +504,19 @@ TextField(
     }
 
     final provider = context.read<AppProvider>();
+    final uuid = const Uuid();
+    
     final device = Device(
-  id: uuid.v4(),
-  name: nameController.text,
-  type: selectedType,
-  ipAddress: ipController.text,
-  gpioPin: gpioPinController.text.isNotEmpty 
-      ? int.parse(gpioPinController.text) 
-      : null,
-  statusGpioPin: statusGpioPinController.text.isNotEmpty   // NEW
-      ? int.parse(statusGpioPinController.text) 
-      : null,
-  )
-      
+      id: uuid.v4(),
+      name: _nameController.text.trim(),
+      type: _selectedType,
+      ipAddress: _ipController.text.trim(),
+      gpioPin: _gpioController.text.isNotEmpty 
+          ? int.parse(_gpioController.text) 
+          : null,
+      statusPin: _statusGpioController.text.isNotEmpty   // NEW
+          ? int.parse(_statusGpioController.text) 
+          : null,
       roomId: _selectedRoomId,
       hasBattery: _hasBattery,
       batteryLevel: _hasBattery ? 100 : null,
@@ -424,6 +530,7 @@ TextField(
       SnackBar(
         content: Text('${device.name} added successfully'),
         backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
