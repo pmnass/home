@@ -712,6 +712,8 @@ class AppProvider extends ChangeNotifier {
 
 // Updated generateArduinoCode() method for app_provider.dart
 
+// Updated generateArduinoCode() method for app_provider.dart
+
 String generateArduinoCode() {
   final buffer = StringBuffer();
 
@@ -724,6 +726,12 @@ String generateArduinoCode() {
   buffer.writeln('#include <ESP8266WiFi.h>');
   buffer.writeln('#include <ESP8266WebServer.h>');
   buffer.writeln('#include <ArduinoJson.h>');
+  buffer.writeln();
+  buffer.writeln('// ========== RELAY CONFIGURATION ==========');
+  buffer.writeln('// Using optocoupler (PC817) with ACTIVE LOW relays');
+  buffer.writeln('// HIGH = Optocoupler LED ON = Relay activates');
+  buffer.writeln('#define RELAY_ON  HIGH');
+  buffer.writeln('#define RELAY_OFF LOW');
   buffer.writeln();
   
   buffer.writeln('// ========== WIFI CONFIGURATION ==========');
@@ -801,7 +809,7 @@ String generateArduinoCode() {
     if (device.gpioPin != null) {
       final pinName = device.name.toUpperCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^A-Z0-9_]'), '');
       buffer.writeln('  pinMode(CONTROL_PIN_$pinName, OUTPUT);');
-      buffer.writeln('  digitalWrite(CONTROL_PIN_$pinName, LOW);');
+      buffer.writeln('  digitalWrite(CONTROL_PIN_$pinName, RELAY_OFF);  // Start OFF (ACTIVE LOW)');
     }
   }
   
@@ -913,18 +921,18 @@ String generateArduinoCode() {
       // For lights with PWM support (brightness)
       if (device.type == DeviceType.light) {
         buffer.writeln('      int brightness = server.hasArg("brightness") ? server.arg("brightness").toInt() : 100;');
-        buffer.writeln('      int pwmValue = map(brightness, 0, 100, 0, 1023);');
+        buffer.writeln('      int pwmValue = map(brightness, 0, 100, 0, 1023);  // 0-100% brightness');
         buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, pwmValue);');
       } 
       // For fans with speed control
       else if (device.type == DeviceType.fan) {
         buffer.writeln('      int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 3;');
-        buffer.writeln('      int pwmValue = map(speed, 1, 5, 204, 1023);  // 20%-100%');
+        buffer.writeln('      int pwmValue = map(speed, 1, 5, 204, 1023);  // 20%-100% speed');
         buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, pwmValue);');
       } 
       // For pumps and others - simple digital
       else {
-        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, HIGH);');
+        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, RELAY_ON);');
       }
       
       buffer.writeln('      success = true;');
@@ -932,9 +940,9 @@ String generateArduinoCode() {
       
       // Turn off (works for all types)
       if (device.type == DeviceType.light || device.type == DeviceType.fan) {
-        buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, 0);');
+        buffer.writeln('      analogWrite(CONTROL_PIN_$pinName, 0);  // 0 = OFF');
       } else {
-        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, LOW);');
+        buffer.writeln('      digitalWrite(CONTROL_PIN_$pinName, RELAY_OFF);');
       }
       
       buffer.writeln('      success = true;');
@@ -1020,7 +1028,6 @@ String generateArduinoCode() {
 
   return buffer.toString();
 }
-
   // Storage
   Future<void> _loadFromStorage() async {
     try {
