@@ -1,3 +1,4 @@
+// lib/services/esp_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -17,7 +18,9 @@ class EspService {
       attempt++;
       try {
         final resp = await http.get(uri).timeout(timeout);
-        if (resp.statusCode == 200) return json.decode(resp.body) as Map<String, dynamic>;
+        if (resp.statusCode == 200) {
+          return json.decode(resp.body) as Map<String, dynamic>;
+        }
         throw Exception('HTTP ${resp.statusCode}');
       } on TimeoutException {
         if (attempt > maxRetries) rethrow;
