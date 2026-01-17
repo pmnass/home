@@ -272,7 +272,7 @@ class AppProvider extends ChangeNotifier {
   notifyListeners();
 }
 
-   SyncFuture<void> syncDevices() async {
+   Future<void> syncDevices() async {
   _isSyncing = true;
   _syncProgress = 0;
   notifyListeners();
