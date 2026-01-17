@@ -1,6 +1,6 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'widgets/device_controls.dart'; // parent/composer screen you created
-import 'services/esp_service.dart';
+import 'widgets/device_controls.dart';
 
 void main() {
   runApp(const HomeCircuitApp());
@@ -29,13 +29,12 @@ class HomeCircuitApp extends StatelessWidget {
 class DeviceListScreen extends StatelessWidget {
   const DeviceListScreen({Key? key}) : super(key: key);
 
-  // Replace or extend this list with your actual static IPs
+  // Replace or extend this list with your actual static IPs and strict names
   static const List<Map<String, String>> devices = [
-    {'ip': '192.168.1.100', 'name': 'Gateway (Parent)'},
-    {'ip': '192.168.1.101', 'name': 'Device 101'},
-    {'ip': '192.168.1.102', 'name': 'Device 102'},
-    {'ip': '192.168.1.103', 'name': 'Device 103'},
-    // add up to 192.168.1.120 as needed
+    {'ip': '192.168.1.100', 'name': 'Parent Gateway'},
+    {'ip': '192.168.1.101', 'name': 'Device_101'},
+    {'ip': '192.168.1.102', 'name': 'Device_102'},
+    // add more devices as needed
   ];
 
   @override
