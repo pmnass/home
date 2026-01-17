@@ -278,75 +278,48 @@ class AppProvider extends ChangeNotifier {
   _syncProgress = 0;
   notifyListeners();
 
-  _addLog(deviceId: 'system', deviceName: 'System', type: LogType.sync, action: 'Device sync started');
-
   int onlineCount = 0;
 
   for (int i = 0; i < _devices.length; i++) {
     final device = _devices[i];
     
     try {
+      // Use PARENT ESP for all devices
       final response = await http.get(
-        Uri.parse('http://${device.ipAddress}/status'),
+        Uri.parse('http://192.168.1.100/status'),
       ).timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Extract data based on device type
-        bool actualIsOn = false;
-        int? waterLevel;
-        int? batteryLevel;
-        
-        if (device.type == DeviceType.waterPump) {
-          // Child ESP sensor format
-          waterLevel = data['level_pct'];
-          batteryLevel = data['battery_pct'];
-          actualIsOn = false; // Pumps controlled by parent
-        } else {
-          // Other devices
-          actualIsOn = data['isOn'] ?? device.isOn;
-        }
-        
-        // Detect manual override
-        if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
-          _addLog(
-            deviceId: device.id,
-            deviceName: device.name,
-            type: LogType.info,
-            action: 'Manual override',
-            details: '${actualIsOn ? "ON" : "OFF"}',
+        if (data['tanks'] != null) {
+          final tanks = data['tanks'] as List;
+          
+          // Find this device in tanks array by matching IP
+          final tankData = tanks.firstWhere(
+            (t) => t['ip'] == device.ipAddress,
+            orElse: () => null,
           );
+          
+          if (tankData != null) {
+            _devices[i] = device.copyWith(
+              isOnline: tankData['online'] ?? false,
+              isOn: tankData['pump'] ?? false,
+              waterLevel: tankData['level'] ?? device.waterLevel,
+              batteryLevel: tankData['battery'] ?? device.batteryLevel,
+              lastSeen: DateTime.now(),
+            );
+            onlineCount++;
+          }
         }
-        
-        _devices[i] = device.copyWith(
-          isOnline: true,
-          isOn: actualIsOn,
-          waterLevel: waterLevel ?? device.waterLevel,
-          batteryLevel: batteryLevel ?? device.batteryLevel,
-          lastSeen: DateTime.now(),
-        );
-        
-        onlineCount++;
-      } else {
-        _devices[i] = device.copyWith(isOnline: false);
       }
     } catch (e) {
       _devices[i] = device.copyWith(isOnline: false);
-      print('Device ${device.name} error: $e');
     }
 
     _syncProgress = (i + 1).toDouble() / _devices.length;
     notifyListeners();
   }
-
-  _addLog(
-    deviceId: 'system',
-    deviceName: 'System',
-    type: LogType.sync,
-    action: 'Sync completed',
-    details: '$onlineCount/${_devices.length} devices online',
-  );
 
   _isSyncing = false;
   _saveToStorage();
