@@ -1,73 +1,72 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
-import 'providers/app_provider.dart';
-import 'screens/main_shell.dart';
-import 'theme/app_theme.dart';
+import 'widgets/device_controls.dart'; // parent/composer screen you created
+import 'services/esp_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize AwesomeNotifications
-  await AwesomeNotifications().initialize(
-    null, // Default app icon
-    [
-      NotificationChannel(
-        channelKey: 'alerts',
-        channelName: 'Alerts',
-        channelDescription: 'Important alerts and warnings',
-        defaultColor: Colors.red,
-        ledColor: Colors.red,
-        importance: NotificationImportance.High,
-        playSound: true,
-        enableVibration: true,
-      ),
-      NotificationChannel(
-        channelKey: 'events',
-        channelName: 'Device Events',
-        channelDescription: 'Device status changes',
-        defaultColor: Colors.blue,
-        ledColor: Colors.blue,
-        importance: NotificationImportance.Default,
-        playSound: true,
-      ),
-    ],
-  );
-  
-  // Request notification permissions
-  await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
-    if (!isAllowed) {
-      AwesomeNotifications().requestPermissionToSendNotifications();
-    }
-  });
-  
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  );
-  
+void main() {
   runApp(const HomeCircuitApp());
 }
 
 class HomeCircuitApp extends StatelessWidget {
-  const HomeCircuitApp({super.key});
+  const HomeCircuitApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppProvider()..initialize(),
-      child: Consumer<AppProvider>(
-        builder: (context, provider, _) {
-          return MaterialApp(
-            title: provider.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: provider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: const MainShell(),
+    return MaterialApp(
+      title: 'Home Circuit',
+      theme: ThemeData.light().copyWith(
+        primaryColor: const Color(0xFF00E5FF),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF00BCD4),
+          foregroundColor: Colors.white,
+        ),
+      ),
+      darkTheme: ThemeData.dark(),
+      home: const DeviceListScreen(),
+    );
+  }
+}
+
+class DeviceListScreen extends StatelessWidget {
+  const DeviceListScreen({Key? key}) : super(key: key);
+
+  // Replace or extend this list with your actual static IPs
+  static const List<Map<String, String>> devices = [
+    {'ip': '192.168.1.100', 'name': 'Gateway (Parent)'},
+    {'ip': '192.168.1.101', 'name': 'Device 101'},
+    {'ip': '192.168.1.102', 'name': 'Device 102'},
+    {'ip': '192.168.1.103', 'name': 'Device 103'},
+    // add up to 192.168.1.120 as needed
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Home Circuit — Devices'),
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: devices.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final device = devices[index];
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            tileColor: Theme.of(context).cardColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            title: Text(device['name'] ?? device['ip']!),
+            subtitle: Text(device['ip'] ?? ''),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DeviceControlsScreen(
+                    ip: device['ip']!,
+                    name: device['name'] ?? device['ip']!,
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
