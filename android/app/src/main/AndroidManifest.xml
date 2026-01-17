@@ -24,6 +24,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
+        android:usesCleartextTraffic="true">
         
         <!-- Disable Impeller - use Skia renderer for better GPU compatibility -->
         <meta-data
