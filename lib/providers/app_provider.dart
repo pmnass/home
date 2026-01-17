@@ -273,144 +273,79 @@ class AppProvider extends ChangeNotifier {
 }
 
 // Sync
-   Future<void> syncDevices() async {
+  Future<void> syncDevices() async {
   _isSyncing = true;
   _syncProgress = 0;
   notifyListeners();
 
-  _addLog(
-    deviceId: 'system',
-    deviceName: 'System',
-    type: LogType.sync,
-    action: 'Device sync started',
-  );
+  _addLog(deviceId: 'system', deviceName: 'System', type: LogType.sync, action: 'Device sync started');
 
-  final totalDevices = _devices.length;
   int onlineCount = 0;
-  int manualOverrideCount = 0;
 
   for (int i = 0; i < _devices.length; i++) {
     final device = _devices[i];
     
     try {
-      // Make real HTTP request to device
       final response = await http.get(
         Uri.parse('http://${device.ipAddress}/status'),
-      ).timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => throw TimeoutException('Device timeout'),
-      );
+      ).timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
-        // Parse JSON response
         final data = jsonDecode(response.body);
         
-        // Find this device in the response
-        if (data['devices'] != null && data['devices'] is List) {
-          final deviceData = (data['devices'] as List).firstWhere(
-            (d) => d['name'] == device.name,
-            orElse: () => null,
-          );
-          
-          if (deviceData != null) {
-            // Get actual device state from GPIO
-            bool actualIsOn = deviceData['isOn'] ?? device.isOn;
-            
-            // Check if manual override detected (only for devices with status pin)
-            if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
-              manualOverrideCount++;
-              
-              _addLog(
-                deviceId: device.id,
-                deviceName: device.name,
-                type: LogType.info,
-                action: 'Manual override detected',
-                details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
-              );
-              
-              // Show notification for manual changes
-              if (_notificationsEnabled && device.notificationsEnabled) {
-                NotificationHelper.showDeviceStatusChange(
-                  deviceName: device.name,
-                  isOn: actualIsOn,
-                  reason: 'Manual override detected',
-                );
-              }
-            }
-            
-            // Update device with real status
-            _devices[i] = device.copyWith(
-              isOnline: true,
-              isOn: actualIsOn,
-              lastSeen: DateTime.now(),
-            );
-            
-            onlineCount++;
-          } else {
-            // Device found but not in response
-            _devices[i] = device.copyWith(
-              isOnline: true,
-              lastSeen: DateTime.now(),
-            );
-            onlineCount++;
-          }
+        // Extract data based on device type
+        bool actualIsOn = false;
+        int? waterLevel;
+        int? batteryLevel;
+        
+        if (device.type == DeviceType.waterPump) {
+          // Child ESP sensor format
+          waterLevel = data['level_pct'];
+          batteryLevel = data['battery_pct'];
+          actualIsOn = false; // Pumps controlled by parent
         } else {
-          // Response format unexpected
-          _devices[i] = device.copyWith(
-            isOnline: true,
-            lastSeen: DateTime.now(),
-          );
-          onlineCount++;
+          // Other devices
+          actualIsOn = data['isOn'] ?? device.isOn;
         }
-      } else {
-        // Device responded but with error
+        
+        // Detect manual override
+        if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
+          _addLog(
+            deviceId: device.id,
+            deviceName: device.name,
+            type: LogType.info,
+            action: 'Manual override',
+            details: '${actualIsOn ? "ON" : "OFF"}',
+          );
+        }
+        
         _devices[i] = device.copyWith(
-          isOnline: false,
+          isOnline: true,
+          isOn: actualIsOn,
+          waterLevel: waterLevel ?? device.waterLevel,
+          batteryLevel: batteryLevel ?? device.batteryLevel,
           lastSeen: DateTime.now(),
         );
+        
+        onlineCount++;
+      } else {
+        _devices[i] = device.copyWith(isOnline: false);
       }
-    } on TimeoutException {
-      // Device timeout
-      _devices[i] = device.copyWith(isOnline: false);
-      
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.error,
-        action: 'Sync timeout',
-        details: 'Device did not respond within 3 seconds',
-      );
     } catch (e) {
-      // Device unreachable or other error
       _devices[i] = device.copyWith(isOnline: false);
-      
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.error,
-        action: 'Sync failed',
-        details: e.toString(),
-      );
+      print('Device ${device.name} error: $e');
     }
 
-    _syncProgress = (i + 1).toDouble() / totalDevices;
+    _syncProgress = (i + 1).toDouble() / _devices.length;
     notifyListeners();
-    
-    // Small delay between requests to avoid overwhelming network
-    await Future.delayed(const Duration(milliseconds: 200));
-  }
-
-  String syncSummary = '$onlineCount/$totalDevices online';
-  if (manualOverrideCount > 0) {
-    syncSummary += ', $manualOverrideCount manual override${manualOverrideCount > 1 ? 's' : ''}';
   }
 
   _addLog(
     deviceId: 'system',
     deviceName: 'System',
     type: LogType.sync,
-    action: 'Device sync completed',
-    details: syncSummary,
+    action: 'Sync completed',
+    details: '$onlineCount/${_devices.length} devices online',
   );
 
   _isSyncing = false;
