@@ -282,136 +282,73 @@ class AppProvider extends ChangeNotifier {
     deviceId: 'system',
     deviceName: 'System',
     type: LogType.sync,
-    action: 'Device sync started',
+    action: 'MQTT sync started',
   );
 
-  final totalDevices = _devices.length;
-  int onlineCount = 0;
-  int manualOverrideCount = 0;
-
-  for (int i = 0; i < _devices.length; i++) {
-    final device = _devices[i];
-    
-    try {
-      // Make real HTTP request to device
-      final response = await http.get(
-        Uri.parse('http://${device.ipAddress}/status'),
-      ).timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => throw TimeoutException('Device timeout'),
-      );
-
-      if (response.statusCode == 200) {
-        // Parse JSON response
-        final data = jsonDecode(response.body);
-        
-        // Find this device in the response
-        if (data['devices'] != null && data['devices'] is List) {
-          final deviceData = (data['devices'] as List).firstWhere(
-            (d) => d['name'] == device.name,
-            orElse: () => null,
-          );
-          
-          if (deviceData != null) {
-            // Get actual device state from GPIO
-            bool actualIsOn = deviceData['isOn'] ?? device.isOn;
-            
-            // Check if manual override detected (only for devices with status pin)
-            if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
-              manualOverrideCount++;
-              
-              _addLog(
-                deviceId: device.id,
-                deviceName: device.name,
-                type: LogType.info,
-                action: 'Manual override detected',
-                details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
-              );
-              
-              // Show notification for manual changes
-              if (_notificationsEnabled && device.notificationsEnabled) {
-                NotificationHelper.showDeviceStatusChange(
-                  deviceName: device.name,
-                  isOn: actualIsOn,
-                  reason: 'Manual override detected',
-                );
-              }
-            }
-            
-            // Update device with real status
-            _devices[i] = device.copyWith(
-              isOnline: true,
-              isOn: actualIsOn,
-              lastSeen: DateTime.now(),
-            );
-            
-            onlineCount++;
-          } else {
-            // Device found but not in response
-            _devices[i] = device.copyWith(
-              isOnline: true,
-              lastSeen: DateTime.now(),
-            );
-            onlineCount++;
-          }
-        } else {
-          // Response format unexpected
-          _devices[i] = device.copyWith(
-            isOnline: true,
-            lastSeen: DateTime.now(),
-          );
-          onlineCount++;
-        }
-      } else {
-        // Device responded but with error
-        _devices[i] = device.copyWith(
-          isOnline: false,
-          lastSeen: DateTime.now(),
-        );
-      }
-    } on TimeoutException {
-      // Device timeout
-      _devices[i] = device.copyWith(isOnline: false);
-      
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.error,
-        action: 'Sync timeout',
-        details: 'Device did not respond within 3 seconds',
-      );
-    } catch (e) {
-      // Device unreachable or other error
-      _devices[i] = device.copyWith(isOnline: false);
-      
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.error,
-        action: 'Sync failed',
-        details: e.toString(),
-      );
+  try {
+    // Subscribe to all device status topics
+    for (final device in _devices) {
+      client.subscribe('home/${device.id}/status', MqttQos.atMostOnce);
     }
 
-    _syncProgress = (i + 1).toDouble() / totalDevices;
-    notifyListeners();
-    
-    // Small delay between requests to avoid overwhelming network
-    await Future.delayed(const Duration(milliseconds: 200));
-  }
+    // Listen for incoming MQTT messages
+    client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
+      final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
+      final String message =
+          MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
 
-  String syncSummary = '$onlineCount/$totalDevices online';
-  if (manualOverrideCount > 0) {
-    syncSummary += ', $manualOverrideCount manual override${manualOverrideCount > 1 ? 's' : ''}';
-  }
+      final topic = c[0].topic; // e.g. home/device1/status
+      final deviceId = topic.split('/')[1];
 
-  _addLog(
-    deviceId: 'system',
-    deviceName: 'System',
-    type: LogType.sync,
-    action: 'Device sync completed',
-    details: syncSummary,
-  );
+      final index = _devices.indexWhere((d) => d.id == deviceId);
+      if (index != -1) {
+        final device = _devices[index];
+        final actualIsOn = message == 'ON';
+
+        // Detect manual override
+        if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
+          _addLog(
+            deviceId: device.id,
+            deviceName: device.name,
+            type: LogType.info,
+            action: 'Manual override detected',
+            details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
+          );
+
+          if (_notificationsEnabled && device.notificationsEnabled) {
+            NotificationHelper.showDeviceStatusChange(
+              deviceName: device.name,
+              isOn: actualIsOn,
+              reason: 'Manual override detected',
+            );
+          }
+        }
+
+        // Update device state
+        _devices[index] = device.copyWith(
+          isOnline: true,
+          isOn: actualIsOn,
+          lastSeen: DateTime.now(),
+        );
+        notifyListeners();
+      }
+    });
+
+    _addLog(
+      deviceId: 'system',
+      deviceName: 'System',
+      type: LogType.sync,
+      action: 'MQTT sync listening',
+    );
+  } catch (e) {
+    _addLog(
+      deviceId: 'system',
+      deviceName: 'System',
+      type: LogType.error,
+      action: 'MQTT sync failed',
+      details: e.toString(),
+    );
+  }
 
   _isSyncing = false;
   _saveToStorage();
