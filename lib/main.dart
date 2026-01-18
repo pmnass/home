@@ -1,5 +1,6 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';   // ✅ Needed for AppProvider
+import 'providers/app_provider.dart';      // ✅ Your MQTT logic lives here
 import 'widgets/device_controls.dart';
 
 void main() {
@@ -11,17 +12,20 @@ class HomeCircuitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Home Circuit',
-      theme: ThemeData.light().copyWith(
-        primaryColor: const Color(0xFF00E5FF),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF00BCD4),
-          foregroundColor: Colors.white,
+    return ChangeNotifierProvider(
+      create: (_) => AppProvider()..initialize(),   // ✅ Auto‑initialize provider
+      child: MaterialApp(
+        title: 'Home Circuit',
+        theme: ThemeData.light().copyWith(
+          primaryColor: const Color(0xFF00E5FF),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF00BCD4),
+            foregroundColor: Colors.white,
+          ),
         ),
+        darkTheme: ThemeData.dark(),
+        home: const DeviceListScreen(),
       ),
-      darkTheme: ThemeData.dark(),
-      home: const DeviceListScreen(),
     );
   }
 }
@@ -29,39 +33,33 @@ class HomeCircuitApp extends StatelessWidget {
 class DeviceListScreen extends StatelessWidget {
   const DeviceListScreen({Key? key}) : super(key: key);
 
-  // Replace or extend this list with your actual static IPs and strict names
-  static const List<Map<String, String>> devices = [
-    {'ip': '192.168.1.100', 'name': 'Parent Gateway'},
-    {'ip': '192.168.1.101', 'name': 'Device_101'},
-    {'ip': '192.168.1.102', 'name': 'Device_102'},
-    // add more devices as needed
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AppProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Circuit — Devices'),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: devices.length,
+        itemCount: provider.devices.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          final device = devices[index];
+          final device = provider.devices[index];
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             tileColor: Theme.of(context).cardColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            title: Text(device['name'] ?? device['ip']!),
-            subtitle: Text(device['ip'] ?? ''),
+            title: Text(device.name),
+            subtitle: Text(device.ipAddress ?? ''),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => DeviceControlsScreen(
-                    ip: device['ip']!,
-                    name: device['name'] ?? device['ip']!,
+                    ip: device.ipAddress ?? '',
+                    name: device.name,
                   ),
                 ),
               );
