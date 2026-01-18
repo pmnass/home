@@ -12,46 +12,48 @@ class DeviceControlCard extends StatelessWidget {
     final provider = Provider.of<AppProvider>(context);
 
     return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (!device.isOnline)
-              const Text('Offline', style: TextStyle(color: Colors.red)),
-            if (device.type == DeviceType.waterPump)
-              ListTile(
-                title: Text('Water Pump'),
-                subtitle: Text('Level: ${device.waterLevel}%'),
-                trailing: Switch(
-                  value: device.isOn,
-                  onChanged: (v) async {
-                    await provider.toggleDevice(device.id);
-                  },
-                ),
+            Text(device.name,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+
+            // Show online/offline
+            Text(
+              device.isOnline ? 'Online' : 'Offline',
+              style: TextStyle(
+                color: device.isOnline ? Colors.green : Colors.red,
+                fontSize: 12,
               ),
+            ),
+
+            // Power toggle
+            Switch(
+              value: device.isOn,
+              onChanged: device.isOnline
+                  ? (_) async => await provider.toggleDevice(device.id)
+                  : null,
+            ),
+
+            // Extra controls depending on type
             if (device.type == DeviceType.light)
-              ListTile(
-                title: Text('Light'),
-                subtitle: Text('Brightness: ${device.brightness}%'),
-                trailing: Switch(
-                  value: device.isOn,
-                  onChanged: (v) async {
-                    await provider.toggleDevice(device.id);
-                  },
-                ),
-              ),
+              Text('Brightness: ${device.brightness ?? 0}%'),
             if (device.type == DeviceType.fan)
-              ListTile(
-                title: Text('Fan'),
-                subtitle: Text('Speed: ${device.fanSpeed}'),
-                trailing: Switch(
-                  value: device.isOn,
-                  onChanged: (v) async {
-                    await provider.toggleDevice(device.id);
-                  },
-                ),
+              Text('Fan Speed: ${device.fanSpeed ?? 1}'),
+            if (device.type == DeviceType.waterPump)
+              Text('Water Level: ${device.waterLevel ?? 0}%'),
+            if (device.type == DeviceType.gasSensor)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('LPG: ${device.lpgValue?.toStringAsFixed(1) ?? '--'} ppm'),
+                  Text('CO: ${device.coValue?.toStringAsFixed(1) ?? '--'} ppm'),
+                ],
               ),
           ],
         ),
