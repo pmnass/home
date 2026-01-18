@@ -356,52 +356,62 @@ void _runSimulation() {
 
   // Master Switch
   Future<bool> masterSwitch(String key, bool turnOn) async {
-    if (key != authKey) return false;
+  if (key != authKey) return false;
 
-    final lights = lightDevices;
-    int successCount = 0;
-    int failCount = 0;
+  final lights = lightDevices;
+  int successCount = 0;
+  int failCount = 0;
 
-    for (final light in lights) {
-      // Simulate sending command
-      await Future.delayed(const Duration(milliseconds: 200));
+  for (final light in lights) {
+    try {
+      // Build MQTT payload
+      final builder = MqttClientPayloadBuilder();
+      builder.addString(turnOn ? 'ON' : 'OFF');
 
-      final success = math.Random().nextDouble() > 0.1;
-      if (success) {
-        final index = _devices.indexWhere((d) => d.id == light.id);
-        if (index != -1) {
-          _devices[index] = _devices[index].copyWith(isOn: turnOn);
-          successCount++;
-        }
-        _addLog(
-          deviceId: light.id,
-          deviceName: light.name,
-          type: turnOn ? LogType.deviceOn : LogType.deviceOff,
-          action: 'Master Switch: ${turnOn ? 'ON' : 'OFF'}',
-        );
-      } else {
-        failCount++;
-        _addLog(
-          deviceId: light.id,
-          deviceName: light.name,
-          type: LogType.error,
-          action: 'Master Switch command failed',
-        );
+      // Publish to broker: home/<deviceId>/set
+      client.publishMessage(
+        'home/${light.id}/set',
+        MqttQos.atMostOnce,
+        builder.payload!,
+      );
+
+      // Update local state immediately
+      final index = _devices.indexWhere((d) => d.id == light.id);
+      if (index != -1) {
+        _devices[index] = _devices[index].copyWith(isOn: turnOn);
+        successCount++;
       }
+
+      _addLog(
+        deviceId: light.id,
+        deviceName: light.name,
+        type: turnOn ? LogType.deviceOn : LogType.deviceOff,
+        action: 'Master Switch: ${turnOn ? 'ON' : 'OFF'}',
+      );
+    } catch (e) {
+      failCount++;
+      _addLog(
+        deviceId: light.id,
+        deviceName: light.name,
+        type: LogType.error,
+        action: 'Master Switch command failed',
+        details: e.toString(),
+      );
     }
-
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.info,
-      action: 'Master Switch completed',
-      details: 'Success: $successCount, Failed: $failCount',
-    );
-
-    _saveToStorage();
-    notifyListeners();
-    return failCount == 0;
   }
+
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.info,
+    action: 'Master Switch completed',
+    details: 'Success: $successCount, Failed: $failCount',
+  );
+
+  _saveToStorage();
+  notifyListeners();
+  return failCount == 0;
+}
 
   // Device Management
   void addDevice(Device device) {
