@@ -143,14 +143,10 @@ class _LogsScreenState extends State<LogsScreen> {
             label: 'Device: ${provider.devices.firstWhere(
               (d) => d.id == _selectedDeviceId,
               orElse: () => Device(
-  id: '',
-  name: 'Unknown',
-  type: DeviceType.light,
-  gpioPin: null,
-  statusPin: null,
-  isOn: false,
-  isOnline: false,
-),
+                id: '',
+                name: 'Unknown',
+                type: DeviceType.light,
+              ),
             ).name}',
             onRemove: () {
               setState(() => _selectedDeviceId = null);
