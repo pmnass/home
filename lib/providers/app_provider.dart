@@ -66,125 +66,128 @@ class AppProvider extends ChangeNotifier {
 
   // Initialize
   Future<void> initialize() async {
-    await _loadFromStorage();
-    _isInitialized = true;
-    notifyListeners();
+  await _loadFromStorage();
+  _isInitialized = true;
+  notifyListeners();
 
-    if (_isSimulationEnabled) {
-      _startSimulation();
-    }
+  if (_isSimulationEnabled) {
+    _startSimulation();
   }
 
-  // Theme
-  void toggleTheme() {
-    _isDarkMode = !_isDarkMode;
+  // ✅ Auto-connect to MQTT broker when app starts
+  await connectBroker();
+}
+
+// Theme
+void toggleTheme() {
+  _isDarkMode = !_isDarkMode;
+  _saveToStorage();
+  notifyListeners();
+}
+
+void setTheme(bool isDark) {
+  _isDarkMode = isDark;
+  _saveToStorage();
+  notifyListeners();
+}
+
+// App Name
+void setAppName(String name) {
+  _appName = name;
+  _saveToStorage();
+  notifyListeners();
+}
+
+// Mode
+bool switchToLocalAuto(String key) {
+  if (key != authKey) return false;
+  _appMode = AppMode.localAuto;
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.info,
+    action: 'Switched to Local Auto mode',
+  );
+  _saveToStorage();
+  notifyListeners();
+  return true;
+}
+
+void switchToRemote() {
+  _appMode = AppMode.remote;
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.info,
+    action: 'Switched to Remote mode',
+  );
+  _saveToStorage();
+  notifyListeners();
+}
+
+// Thresholds
+void setPumpThresholds(int min, int max) {
+  _pumpMinThreshold = min;
+  _pumpMaxThreshold = max;
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.threshold,
+    action: 'Pump thresholds updated',
+    details: 'Min: $min%, Max: $max%',
+  );
+  _saveToStorage();
+  notifyListeners();
+}
+
+// Notifications
+void setNotificationsEnabled(bool enabled) {
+  _notificationsEnabled = enabled;
+  _saveToStorage();
+  notifyListeners();
+}
+
+void setDeviceNotifications(String deviceId, bool enabled) {
+  final index = _devices.indexWhere((d) => d.id == deviceId);
+  if (index != -1) {
+    _devices[index] = _devices[index].copyWith(notificationsEnabled: enabled);
     _saveToStorage();
     notifyListeners();
   }
+}
 
-  void setTheme(bool isDark) {
-    _isDarkMode = isDark;
-    _saveToStorage();
-    notifyListeners();
+// Encryption
+void setEncryptionEnabled(bool enabled) {
+  _encryptionEnabled = enabled;
+  _saveToStorage();
+  notifyListeners();
+}
+
+// Simulation
+void setSimulationEnabled(bool enabled) {
+  _isSimulationEnabled = enabled;
+  if (enabled) {
+    _startSimulation();
+  } else {
+    _stopSimulation();
   }
+  _saveToStorage();
+  notifyListeners();
+}
 
-  // App Name
-  void setAppName(String name) {
-    _appName = name;
-    _saveToStorage();
-    notifyListeners();
-  }
+void _startSimulation() {
+  _simulationTimer?.cancel();
+  _simulationTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _runSimulation();
+  });
+}
 
-  // Mode
-  bool switchToLocalAuto(String key) {
-    if (key != authKey) return false;
-    _appMode = AppMode.localAuto;
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.info,
-      action: 'Switched to Local Auto mode',
-    );
-    _saveToStorage();
-    notifyListeners();
-    return true;
-  }
+void _stopSimulation() {
+  _simulationTimer?.cancel();
+  _simulationTimer = null;
+}
 
-  void switchToRemote() {
-    _appMode = AppMode.remote;
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.info,
-      action: 'Switched to Remote mode',
-    );
-    _saveToStorage();
-    notifyListeners();
-  }
-
-  // Thresholds
-  void setPumpThresholds(int min, int max) {
-    _pumpMinThreshold = min;
-    _pumpMaxThreshold = max;
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.threshold,
-      action: 'Pump thresholds updated',
-      details: 'Min: $min%, Max: $max%',
-    );
-    _saveToStorage();
-    notifyListeners();
-  }
-
-  // Notifications
-  void setNotificationsEnabled(bool enabled) {
-    _notificationsEnabled = enabled;
-    _saveToStorage();
-    notifyListeners();
-  }
-
-  void setDeviceNotifications(String deviceId, bool enabled) {
-    final index = _devices.indexWhere((d) => d.id == deviceId);
-    if (index != -1) {
-      _devices[index] = _devices[index].copyWith(notificationsEnabled: enabled);
-      _saveToStorage();
-      notifyListeners();
-    }
-  }
-
-  // Encryption
-  void setEncryptionEnabled(bool enabled) {
-    _encryptionEnabled = enabled;
-    _saveToStorage();
-    notifyListeners();
-  }
-
-  // Simulation
-  void setSimulationEnabled(bool enabled) {
-    _isSimulationEnabled = enabled;
-    if (enabled) {
-      _startSimulation();
-    } else {
-      _stopSimulation();
-    }
-    _saveToStorage();
-    notifyListeners();
-  }
-
-  void _startSimulation() {
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _runSimulation();
-    });
-  }
-
-  void _stopSimulation() {
-    _simulationTimer?.cancel();
-    _simulationTimer = null;
-  }
-
-  void _runSimulation() {
+void _runSimulation() {
   final random = math.Random();
 
   for (int i = 0; i < _devices.length; i++) {
@@ -196,19 +199,16 @@ class AppProvider extends ChangeNotifier {
       lastSeen: DateTime.now(),
     );
 
-    // Simulate water level changes for pumps
+    // Simulate water pump logic
     if (device.type == DeviceType.waterPump) {
       int newLevel = device.waterLevel;
 
       if (device.isOn) {
-        // Pump is filling - increase water level
         newLevel = (device.waterLevel + random.nextInt(5) + 1).clamp(0, 100);
       } else {
-        // Water is draining - decrease level slowly
         newLevel = (device.waterLevel - random.nextInt(3)).clamp(0, 100);
       }
 
-      // Apply auto-mode logic
       bool shouldBeOn = device.isOn;
       if (_appMode == AppMode.remote) {
         if (newLevel <= _pumpMinThreshold && !device.isOn) {
@@ -232,7 +232,6 @@ class AppProvider extends ChangeNotifier {
         }
       }
 
-      // Emergency stop at 98%
       if (newLevel >= emergencyStopLevel && device.isOn) {
         shouldBeOn = false;
         _addLog(
@@ -253,17 +252,15 @@ class AppProvider extends ChangeNotifier {
     // Simulate gas sensor values
     if (device.type == DeviceType.gasSensor) {
       _devices[i] = device.copyWith(
-        lpgValue: (random.nextDouble() * 100).clamp(0, 100).toDouble(),
-        coValue: (random.nextDouble() * 50).clamp(0, 50).toDouble(),
+        lpgValue: (random.nextDouble() * 100).toDouble(),
+        coValue: (random.nextDouble() * 50).toDouble(),
       );
     }
 
-    // Simulate battery
+    // Simulate battery drain
     if (device.hasBattery && device.batteryLevel != null) {
       _devices[i] = _devices[i].copyWith(
-        batteryLevel: (device.batteryLevel! - random.nextInt(2))
-            .clamp(0, 100),
-            
+        batteryLevel: (device.batteryLevel! - random.nextInt(2)).clamp(0, 100),
       );
     }
   }
