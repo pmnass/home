@@ -1,58 +1,74 @@
 // lib/services/esp_service.dart
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
 
 class EspService {
-  final Duration timeout;
-  final int maxRetries;
+  final String brokerIp;
+  final int port;
+  late MqttServerClient client;
 
-  EspService({this.timeout = const Duration(seconds: 5), this.maxRetries = 2});
+  EspService({required this.brokerIp, this.port = 1883}) {
+    client = MqttServerClient(brokerIp, '');
+    client.port = port;
+    client.logging(on: false);
+    client.keepAlivePeriod = 20;
+    client.onDisconnected = _onDisconnected;
+    client.onConnected = _onConnected;
+    client.onSubscribed = _onSubscribed;
+  }
 
-  Uri _uri(String ip, String path) => Uri.parse('http://$ip/$path');
+  Future<void> connect() async {
+    client.connectionMessage = MqttConnectMessage()
+        .withClientIdentifier('flutter_client_${DateTime.now().millisecondsSinceEpoch}')
+        .startClean()
+        .withWillQos(MqttQos.atMostOnce);
 
-  Future<Map<String, dynamic>> fetchStatus(String ip) async {
-    final uri = _uri(ip, 'status');
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        final resp = await http.get(uri).timeout(timeout);
-        if (resp.statusCode == 200) {
-          return json.decode(resp.body) as Map<String, dynamic>;
-        }
-        throw Exception('HTTP ${resp.statusCode}');
-      } on TimeoutException {
-        if (attempt > maxRetries) rethrow;
-        await Future.delayed(Duration(milliseconds: 300 * attempt));
-      } catch (e) {
-        if (attempt > maxRetries) rethrow;
-        await Future.delayed(Duration(milliseconds: 300 * attempt));
-      }
+    try {
+      await client.connect();
+    } catch (e) {
+      client.disconnect();
+      rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> sendCommand(String ip, String path, {Map<String, dynamic>? body}) async {
-    final uri = _uri(ip, path);
-    int attempt = 0;
-    final headers = {'Content-Type': 'application/json'};
-    final payload = body == null ? null : json.encode(body);
-    while (true) {
-      attempt++;
-      try {
-        final resp = await http.post(uri, headers: headers, body: payload).timeout(timeout);
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          if (resp.body.isEmpty) return {};
-          return json.decode(resp.body) as Map<String, dynamic>;
-        }
-        throw Exception('HTTP ${resp.statusCode}');
-      } on TimeoutException {
-        if (attempt > maxRetries) rethrow;
-        await Future.delayed(Duration(milliseconds: 300 * attempt));
-      } catch (e) {
-        if (attempt > maxRetries) rethrow;
-        await Future.delayed(Duration(milliseconds: 300 * attempt));
+  /// Subscribe to a device's status topic
+  void subscribeStatus(String deviceId, void Function(String message) onMessage) {
+    final topic = 'home/$deviceId/status';
+    client.subscribe(topic, MqttQos.atMostOnce);
+
+    client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
+      final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
+      final String message =
+          MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+
+      if (c[0].topic == topic) {
+        onMessage(message);
       }
-    }
+    });
+  }
+
+  /// Send a command to a device (ON/OFF, brightness, etc.)
+  void sendCommand(String deviceId, String command) {
+    final builder = MqttClientPayloadBuilder();
+    builder.addString(command);
+
+    client.publishMessage(
+      'home/$deviceId/set',
+      MqttQos.atMostOnce,
+      builder.payload!,
+    );
+  }
+
+  void _onConnected() {
+    print('Connected to MQTT broker');
+  }
+
+  void _onDisconnected() {
+    print('Disconnected from MQTT broker');
+  }
+
+  void _onSubscribed(String topic) {
+    print('Subscribed to $topic');
   }
 }
