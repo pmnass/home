@@ -19,7 +19,7 @@ class AppProvider extends ChangeNotifier {
   // Constants
   static const String authKey = 'hodo8212';
   static const int emergencyStopLevel = 98;
-
+late MqttServerClient client;
   // State
   bool _isDarkMode = true;
   bool _isInitialized = false;
@@ -76,7 +76,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   // ✅ Auto-connect to MQTT broker when app starts
-  await connectBroker();
+  await iniMQTT();
 }
 
 // Theme
