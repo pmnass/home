@@ -441,42 +441,53 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<bool> toggleDevice(String id) async {
-    final index = _devices.indexWhere((d) => d.id == id);
-    if (index == -1) return false;
+  final index = _devices.indexWhere((d) => d.id == id);
+  if (index == -1) return false;
 
-    if (_appMode == AppMode.localAuto) {
-      return false; // Can't control in local auto mode
-    }
-
-    final device = _devices[index];
-    final newState = !device.isOn;
-
-    // Simulate command send
-    await Future.delayed(const Duration(milliseconds: 300));
-    final success = math.Random().nextDouble() > 0.1;
-
-    if (success) {
-      _devices[index] = device.copyWith(isOn: newState);
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: newState ? LogType.deviceOn : LogType.deviceOff,
-        action: newState ? 'Turned ON' : 'Turned OFF',
-      );
-      _saveToStorage();
-      notifyListeners();
-      return true;
-    } else {
-      _addLog(
-        deviceId: device.id,
-        deviceName: device.name,
-        type: LogType.error,
-        action: 'Command failed',
-      );
-      notifyListeners();
-      return false;
-    }
+  if (_appMode == AppMode.localAuto) {
+    return false; // Can't control in local auto mode
   }
+
+  final device = _devices[index];
+  final newState = !device.isOn;
+
+  try {
+    // Build MQTT payload
+    final builder = MqttClientPayloadBuilder();
+    builder.addString(newState ? 'ON' : 'OFF');
+
+    // Publish to broker: home/<deviceId>/set
+    client.publishMessage(
+      'home/$id/set',
+      MqttQos.atMostOnce,
+      builder.payload!,
+    );
+
+    // Update local state immediately
+    _devices[index] = device.copyWith(isOn: newState);
+
+    _addLog(
+      deviceId: device.id,
+      deviceName: device.name,
+      type: newState ? LogType.deviceOn : LogType.deviceOff,
+      action: newState ? 'Turned ON' : 'Turned OFF',
+    );
+
+    _saveToStorage();
+    notifyListeners();
+    return true;
+  } catch (e) {
+    _addLog(
+      deviceId: device.id,
+      deviceName: device.name,
+      type: LogType.error,
+      action: 'MQTT publish failed',
+      details: e.toString(),
+    );
+    notifyListeners();
+    return false;
+  }
+}
 
   void setBrightness(String id, int brightness) {
     final index = _devices.indexWhere((d) => d.id == id);
