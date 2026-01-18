@@ -123,50 +123,56 @@ class _LogsScreenState extends State<LogsScreen> {
 
           // Active filters chips
           if (_hasActiveFilters)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  if (_startDate != null || _endDate != null)
-                    _FilterChip(
-                      label: _formatDateRange(),
-                      onRemove: () {
-                        setState(() {
-                          _startDate = null;
-                          _endDate = null;
-                        });
-                      },
-                    ),
-                  if (_selectedDeviceId != null)
-                    _FilterChip(
-                      label:
-                          'Device: ${provider.devices.firstWhere((d) => d.id == _selectedDeviceId, orElse: () => Device(id: '', name: 'Unknown', type: DeviceType.light, ipAddress: '')).name}',
-                      onRemove: () {
-                        setState(() => _selectedDeviceId = null);
-                      },
-                    ),
-                  if (_selectedLogType != null)
-                    _FilterChip(
-                      label: 'Type: ${_selectedLogType!.displayName}',
-                      onRemove: () {
-                        setState(() => _selectedLogType = null);
-                      },
-                    ),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _startDate = null;
-                        _endDate = null;
-                        _selectedDeviceId = null;
-                        _selectedLogType = null;
-                      });
-                    },
-                    child: const Text('Clear all'),
-                  ),
-                ],
+  SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: [
+        if (_startDate != null || _endDate != null)
+          _FilterChip(
+            label: _formatDateRange(),
+            onRemove: () {
+              setState(() {
+                _startDate = null;
+                _endDate = null;
+              });
+            },
+          ),
+        if (_selectedDeviceId != null)
+          _FilterChip(
+            label: 'Device: ${provider.devices.firstWhere(
+              (d) => d.id == _selectedDeviceId,
+              orElse: () => Device(
+                id: '',
+                name: 'Unknown',
+                type: DeviceType.light,
               ),
-            ),
+            ).name}',
+            onRemove: () {
+              setState(() => _selectedDeviceId = null);
+            },
+          ),
+        if (_selectedLogType != null)
+          _FilterChip(
+            label: 'Type: ${_selectedLogType!.displayName}',
+            onRemove: () {
+              setState(() => _selectedLogType = null);
+            },
+          ),
+        TextButton(
+          onPressed: () {
+            setState(() {
+              _startDate = null;
+              _endDate = null;
+              _selectedDeviceId = null;
+              _selectedLogType = null;
+            });
+          },
+          child: const Text('Clear all'),
+        ),
+      ],
+    ),
+  ),
 
           // Logs list
           Expanded(
