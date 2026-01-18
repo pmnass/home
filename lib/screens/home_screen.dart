@@ -852,6 +852,8 @@ class _RoomCard extends StatelessWidget {
   }
 }
 
+// ...imports remain the same...
+
 class _UnassignedDeviceItem extends StatelessWidget {
   final Device device;
 
@@ -868,7 +870,7 @@ class _UnassignedDeviceItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: device.type.color.withValues(alpha:0.2),
+              color: device.type.color.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -889,13 +891,18 @@ class _UnassignedDeviceItem extends StatelessWidget {
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-                Text(
-                  device.ipAddress,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white54 : Colors.black54,
+                // ✅ Show GPIO metadata instead of IP
+                if (device.gpioPin != null || device.statusPin != null)
+                  Text(
+                    [
+                      if (device.gpioPin != null) 'GPIO ${device.gpioPin}',
+                      if (device.statusPin != null) 'Status ${device.statusPin}',
+                    ].join(' • '),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.black54,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
