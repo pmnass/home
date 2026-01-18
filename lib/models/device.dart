@@ -1,98 +1,19 @@
-import 'package:flutter/material.dart';
-
-enum DeviceType {
-  light,
-  fan,
-  waterPump,
-  gasSensor,
-  sensorOnly,
-  custom,
-}
-
-extension DeviceTypeExtension on DeviceType {
-  String get displayName {
-    switch (this) {
-      case DeviceType.light:
-        return 'Light';
-      case DeviceType.fan:
-        return 'Fan';
-      case DeviceType.waterPump:
-        return 'Water Pump';
-      case DeviceType.gasSensor:
-        return 'Gas Sensor';
-      case DeviceType.sensorOnly:
-        return 'Sensor Only';
-      case DeviceType.custom:
-        return 'Custom';
-    }
-  }
-
-  IconData get icon {
-    switch (this) {
-      case DeviceType.light:
-        return Icons.lightbulb_outline;
-      case DeviceType.fan:
-        return Icons.air;
-      case DeviceType.waterPump:
-        return Icons.water_drop_outlined;
-      case DeviceType.gasSensor:
-        return Icons.sensors;
-      case DeviceType.sensorOnly:
-        return Icons.speed;
-      case DeviceType.custom:
-        return Icons.settings_input_component;
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case DeviceType.light:
-        return const Color(0xFFFFEB3B);
-      case DeviceType.fan:
-        return const Color(0xFF00BCD4);
-      case DeviceType.waterPump:
-        return const Color(0xFF2196F3);
-      case DeviceType.gasSensor:
-        return const Color(0xFFFF9800);
-      case DeviceType.sensorOnly:
-        return const Color(0xFF9C27B0);
-      case DeviceType.custom:
-        return const Color(0xFF607D8B);
-    }
-  }
-
-  // Check if device type needs status pin
-  bool get needsStatusPin {
-    switch (this) {
-      case DeviceType.light:
-      case DeviceType.fan:
-      case DeviceType.waterPump:
-      case DeviceType.custom:
-        return true;
-      case DeviceType.gasSensor:
-      case DeviceType.sensorOnly:
-        return false;
-    }
-  }
-}
-
 class Device {
   final String id;
   String name;
   DeviceType type;
-  String ipAddress;
   int? gpioPin;        // Control pin (OUTPUT)
-  int? statusPin;      // Status feedback pin (INPUT) - NEW
+  int? statusPin;      // Status feedback pin (INPUT)
   String? roomId;
   bool isOn;
   bool isOnline;
   int? batteryLevel;
   bool hasBattery;
   int brightness; // 0-100 for lights
-  int fanSpeed; // 1-5 for fans
+  int fanSpeed;   // 1-5 for fans
   int waterLevel; // 0-100 for pumps
   double lpgValue; // For gas sensors
-  double coValue; // For gas sensors
+  double coValue;  // For gas sensors
   bool notificationsEnabled;
   DateTime lastSeen;
   DateTime createdAt;
@@ -101,9 +22,8 @@ class Device {
     required this.id,
     required this.name,
     required this.type,
-    required this.ipAddress,
     this.gpioPin,
-    this.statusPin,  // NEW
+    this.statusPin,
     this.roomId,
     this.isOn = false,
     this.isOnline = false,
@@ -124,9 +44,8 @@ class Device {
     String? id,
     String? name,
     DeviceType? type,
-    String? ipAddress,
     int? gpioPin,
-    int? statusPin,  // NEW
+    int? statusPin,
     String? roomId,
     bool? isOn,
     bool? isOnline,
@@ -145,9 +64,8 @@ class Device {
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
-      ipAddress: ipAddress ?? this.ipAddress,
       gpioPin: gpioPin ?? this.gpioPin,
-      statusPin: statusPin ?? this.statusPin,  // NEW
+      statusPin: statusPin ?? this.statusPin,
       roomId: roomId ?? this.roomId,
       isOn: isOn ?? this.isOn,
       isOnline: isOnline ?? this.isOnline,
@@ -168,9 +86,8 @@ class Device {
         'id': id,
         'name': name,
         'type': type.index,
-        'ipAddress': ipAddress,
         'gpioPin': gpioPin,
-        'statusPin': statusPin,  // NEW
+        'statusPin': statusPin,
         'roomId': roomId,
         'isOn': isOn,
         'isOnline': isOnline,
@@ -190,9 +107,8 @@ class Device {
         id: json['id'],
         name: json['name'],
         type: DeviceType.values[json['type']],
-        ipAddress: json['ipAddress'],
         gpioPin: json['gpioPin'],
-        statusPin: json['statusPin'],  // NEW
+        statusPin: json['statusPin'],
         roomId: json['roomId'],
         isOn: json['isOn'] ?? false,
         isOnline: json['isOnline'] ?? false,
@@ -214,7 +130,6 @@ class Device {
 
   bool get isStale =>
       DateTime.now().difference(lastSeen).inMinutes > 5;
-  
-  // Helper to check if this device should have status pin
+
   bool get shouldHaveStatusPin => type.needsStatusPin;
 }
