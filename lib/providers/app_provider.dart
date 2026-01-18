@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;  // ADD THIS LINE
 import '../models/device.dart';
 import '../models/room.dart';
 import '../models/log_entry.dart';
