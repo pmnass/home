@@ -1,19 +1,82 @@
+// lib/models/device.dart
+enum DeviceType {
+  light,
+  fan,
+  waterPump,
+  gasSensor,
+  sensorOnly,
+}
+
+extension DeviceTypeExtension on DeviceType {
+  String get displayName {
+    switch (this) {
+      case DeviceType.light:
+        return 'Light';
+      case DeviceType.fan:
+        return 'Fan';
+      case DeviceType.waterPump:
+        return 'Water Pump';
+      case DeviceType.gasSensor:
+        return 'Gas Sensor';
+      case DeviceType.sensorOnly:
+        return 'Sensor Only';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case DeviceType.light:
+        return Icons.lightbulb_outline;
+      case DeviceType.fan:
+        return Icons.air;
+      case DeviceType.waterPump:
+        return Icons.water_drop;
+      case DeviceType.gasSensor:
+        return Icons.sensors;
+      case DeviceType.sensorOnly:
+        return Icons.speed;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case DeviceType.light:
+        return const Color(0xFFFFEB3B);
+      case DeviceType.fan:
+        return const Color(0xFF00E5FF);
+      case DeviceType.waterPump:
+        return const Color(0xFF00B8D4);
+      case DeviceType.gasSensor:
+        return const Color(0xFFFF1744);
+      case DeviceType.sensorOnly:
+        return const Color(0xFFAA00FF);
+    }
+  }
+
+  bool get needsStatusPin {
+    return this == DeviceType.light ||
+           this == DeviceType.fan ||
+           this == DeviceType.waterPump;
+  }
+}
+
 class Device {
   final String id;
   String name;
   DeviceType type;
-  int? gpioPin;        // Control pin (OUTPUT)
-  int? statusPin;      // Status feedback pin (INPUT)
+  int? gpioPin;
+  int? statusPin;
   String? roomId;
+  String? ipAddress;  // ✅ Added IP address field
   bool isOn;
   bool isOnline;
   int? batteryLevel;
   bool hasBattery;
-  int brightness; // 0-100 for lights
-  int fanSpeed;   // 1-5 for fans
-  int waterLevel; // 0-100 for pumps
-  double lpgValue; // For gas sensors
-  double coValue;  // For gas sensors
+  int brightness;
+  int fanSpeed;
+  int waterLevel;
+  double lpgValue;
+  double coValue;
   bool notificationsEnabled;
   DateTime lastSeen;
   DateTime createdAt;
@@ -25,6 +88,7 @@ class Device {
     this.gpioPin,
     this.statusPin,
     this.roomId,
+    this.ipAddress,  // ✅ Added to constructor
     this.isOn = false,
     this.isOnline = false,
     this.batteryLevel,
@@ -47,6 +111,7 @@ class Device {
     int? gpioPin,
     int? statusPin,
     String? roomId,
+    String? ipAddress,  // ✅ Added
     bool? isOn,
     bool? isOnline,
     int? batteryLevel,
@@ -67,6 +132,7 @@ class Device {
       gpioPin: gpioPin ?? this.gpioPin,
       statusPin: statusPin ?? this.statusPin,
       roomId: roomId ?? this.roomId,
+      ipAddress: ipAddress ?? this.ipAddress,  // ✅ Added
       isOn: isOn ?? this.isOn,
       isOnline: isOnline ?? this.isOnline,
       batteryLevel: batteryLevel ?? this.batteryLevel,
@@ -89,6 +155,7 @@ class Device {
         'gpioPin': gpioPin,
         'statusPin': statusPin,
         'roomId': roomId,
+        'ipAddress': ipAddress,  // ✅ Added
         'isOn': isOn,
         'isOnline': isOnline,
         'batteryLevel': batteryLevel,
@@ -110,6 +177,7 @@ class Device {
         gpioPin: json['gpioPin'],
         statusPin: json['statusPin'],
         roomId: json['roomId'],
+        ipAddress: json['ipAddress'],  // ✅ Added
         isOn: json['isOn'] ?? false,
         isOnline: json['isOnline'] ?? false,
         batteryLevel: json['batteryLevel'],
@@ -128,8 +196,6 @@ class Device {
             : DateTime.now(),
       );
 
-  bool get isStale =>
-      DateTime.now().difference(lastSeen).inMinutes > 5;
-
+  bool get isStale => DateTime.now().difference(lastSeen).inMinutes > 5;
   bool get shouldHaveStatusPin => type.needsStatusPin;
 }
