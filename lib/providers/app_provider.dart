@@ -282,21 +282,38 @@ Future<void> setCommunicationProtocol(CommunicationProtocol protocol) {
 }
 
 // MQTT Settings
-void setMqttBroker(String ip, int port) {
+Future<void> setMQTTBrokerIp(String ip) async {
   _mqttBrokerIp = ip;
-  _mqttBrokerPort = port;
-  _saveToStorage();
-  notifyListeners();
   
-  // Reinitialize connection with new settings
-  if (_communicationProtocol == CommunicationProtocol.mqtt) {
-    _espService = EspService(
-      protocol: _communicationProtocol,
-      mqttBrokerIp: _mqttBrokerIp,
-      mqttBrokerPort: _mqttBrokerPort,
-    );
-    _initializeMQTT();
+  if (_communicationProtocol == CommunicationProtocol.mqtt && _mqttConnected) {
+    // Reconnect with new IP
+    _mqttSubscription?.cancel();
+    _espService.disconnectMQTT();
+    _mqttConnected = false;
+    
+    _espService.mqttBrokerIp = ip;
+    await _initializeMQTT();
   }
+  
+  await _saveToStorage();
+  notifyListeners();
+}
+
+Future<void> setMQTTBrokerPort(int port) async {
+  _mqttBrokerPort = port;
+  
+  if (_communicationProtocol == CommunicationProtocol.mqtt && _mqttConnected) {
+    // Reconnect with new port
+    _mqttSubscription?.cancel();
+    _espService.disconnectMQTT();
+    _mqttConnected = false;
+    
+    _espService.mqttBrokerPort = port;
+    await _initializeMQTT();
+  }
+  
+  await _saveToStorage();
+  notifyListeners();
 }
 
 // Simulation
