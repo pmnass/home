@@ -83,8 +83,8 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: provider.appMode == AppMode.remote
-                            ? AppTheme.neonGreen.withOpacity(0.2)
-                            : AppTheme.neonAmber.withOpacity(0.2),
+                            ? AppTheme.neonGreen.withValues(alpha:0.2)
+                            : AppTheme.neonAmber.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -144,7 +144,7 @@ class SettingsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.neonAmber.withOpacity(0.1),
+                      color: AppTheme.neonAmber.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -213,8 +213,8 @@ GlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: provider.communicationProtocol == CommunicationProtocol.http
-                ? AppTheme.neonBlue.withOpacity(0.2)
-                : AppTheme.neonGreen.withOpacity(0.2),
+                ? AppTheme.neonBlue.withValues(alpha:0.2)
+                : AppTheme.neonGreen.withValues(alpha:0.2),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -240,13 +240,13 @@ GlassCard(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: provider.mqttConnected
-                ? AppTheme.neonGreen.withOpacity(0.1)
-                : AppTheme.neonRed.withOpacity(0.1),
+                ? AppTheme.neonGreen.withValues(alpha:0.1)
+                : AppTheme.neonRed.withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: provider.mqttConnected
-                  ? AppTheme.neonGreen.withOpacity(0.3)
-                  : AppTheme.neonRed.withOpacity(0.3),
+                  ? AppTheme.neonGreen.withValues(alpha:0.3)
+                  : AppTheme.neonRed.withValues(alpha:0.3),
             ),
           ),
           child: Row(
@@ -262,7 +262,7 @@ GlassCard(
                   boxShadow: provider.mqttConnected && isDark
                       ? [
                           BoxShadow(
-                            color: AppTheme.neonGreen.withOpacity(0.5),
+                            color: AppTheme.neonGreen.withValues(alpha:0.5),
                             blurRadius: 8,
                           ),
                         ]
@@ -320,7 +320,7 @@ GlassCard(
           icon: const Icon(Icons.refresh),
           label: const Text('Reconnect to Broker'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.neonCyan.withOpacity(0.2),
+            backgroundColor: AppTheme.neonCyan.withValues(alpha:0.2),
             foregroundColor: AppTheme.neonCyan,
             minimumSize: const Size(double.infinity, 48),
           ),
@@ -333,8 +333,8 @@ GlassCard(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isDark
-              ? AppTheme.circuitLine.withOpacity(0.5)
-              : Colors.grey.withOpacity(0.1),
+              ? AppTheme.circuitLine.withValues(alpha:0.5)
+              : Colors.grey.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -985,7 +985,7 @@ void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDark
-                          ? AppTheme.neonCyan.withOpacity(0.3)
+                          ? AppTheme.neonCyan.withValues(alpha:0.3)
                           : Colors.grey.shade300,
                     ),
                   ),
@@ -1062,8 +1062,8 @@ class _SettingsTile extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isDark
-                    ? AppTheme.neonCyan.withOpacity(0.1)
-                    : Theme.of(context).primaryColor.withOpacity(0.1),
+                    ? AppTheme.neonCyan.withValues(alpha:0.1)
+                    : Theme.of(context).primaryColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -1143,7 +1143,7 @@ class _ThresholdSlider extends StatelessWidget {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha:0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1159,9 +1159,9 @@ class _ThresholdSlider extends StatelessWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: color,
-            inactiveTrackColor: color.withOpacity(0.2),
+            inactiveTrackColor: color.withValues(alpha:0.2),
             thumbColor: color,
-            overlayColor: color.withOpacity(0.2),
+            overlayColor: color.withValues(alpha:0.2),
           ),
           child: Slider(
             value: value.toDouble(),
@@ -1259,7 +1259,7 @@ class _ThemeToggle extends StatelessWidget {
           color: isDark ? AppTheme.circuitLine : Colors.grey.shade200,
           border: Border.all(
             color: isDark
-                ? AppTheme.neonCyan.withOpacity(0.5)
+                ? AppTheme.neonCyan.withValues(alpha:0.5)
                 : Colors.grey.shade300,
           ),
         ),
@@ -1275,7 +1275,7 @@ class _ThemeToggle extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color:
-                      (isDark ? AppTheme.neonCyan : Colors.amber).withOpacity(0.5),
+                      (isDark ? AppTheme.neonCyan : Colors.amber).withValues(alpha:0.5),
                   blurRadius: 8,
                 ),
               ],
@@ -1322,8 +1322,8 @@ class _ProtocolOption extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withOpacity(0.2)
-              : (isDark ? AppTheme.circuitLine.withOpacity(0.3) : Colors.grey.withOpacity(0.1)),
+              ? color.withValues(alpha:0.2)
+              : (isDark ? AppTheme.circuitLine.withValues(alpha:0.3) : Colors.grey.withValues(alpha:0.1)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : (isDark ? Colors.white24 : Colors.black12),
@@ -1335,7 +1335,7 @@ class _ProtocolOption extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(isSelected ? 0.3 : 0.1),
+                color: color.withValues(alpha:isSelected ? 0.3 : 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
