@@ -9,6 +9,7 @@ import '../models/wifi_network.dart';
 import '../models/device.dart';
 import '../utils/file_download_helper.dart';
 import '../services/esp_service.dart';
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -196,175 +197,177 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Communication Protocol
             _SectionHeader(title: 'Communication Protocol'),
-GlassCard(
-  padding: const EdgeInsets.all(16),
-  child: Column(
-    children: [
-      // Protocol selector
-      _SettingsTile(
-        icon: provider.communicationProtocol == CommunicationProtocol.http
-            ? Icons.http
-            : Icons.wifi_tethering,
-        title: 'Communication Protocol',
-        subtitle: provider.communicationProtocol == CommunicationProtocol.http
-            ? 'HTTP - Direct device communication'
-            : 'MQTT - Broker-based messaging',
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: provider.communicationProtocol == CommunicationProtocol.http
-                ? AppTheme.neonBlue.withValues(alpha:0.2)
-                : AppTheme.neonGreen.withValues(alpha:0.2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            provider.communicationProtocol.name.toUpperCase(),
-            style: TextStyle(
-              color: provider.communicationProtocol == CommunicationProtocol.http
-                  ? AppTheme.neonBlue
-                  : AppTheme.neonGreen,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        onTap: () => _showProtocolDialog(context),
-      ),
-      
-      // MQTT settings (only show when MQTT is selected)
-      if (provider.communicationProtocol == CommunicationProtocol.mqtt) ...[
-        const Divider(height: 24),
-        
-        // MQTT Connection Status
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: provider.mqttConnected
-                ? AppTheme.neonGreen.withValues(alpha:0.1)
-                : AppTheme.neonRed.withValues(alpha:0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: provider.mqttConnected
-                  ? AppTheme.neonGreen.withValues(alpha:0.3)
-                  : AppTheme.neonRed.withValues(alpha:0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: provider.mqttConnected
-                      ? AppTheme.neonGreen
-                      : AppTheme.neonRed,
-                  boxShadow: provider.mqttConnected && isDark
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.neonGreen.withValues(alpha:0.5),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  provider.mqttConnected
-                      ? 'MQTT Broker Connected'
-                      : 'MQTT Broker Disconnected',
-                  style: TextStyle(
-                    color: provider.mqttConnected
-                        ? AppTheme.neonGreen
-                        : AppTheme.neonRed,
-                    fontWeight: FontWeight.w600,
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Protocol selector
+                  _SettingsTile(
+                    icon: provider.communicationProtocol == CommunicationProtocol.http
+                        ? Icons.http
+                        : Icons.wifi_tethering,
+                    title: 'Communication Protocol',
+                    subtitle: provider.communicationProtocol == CommunicationProtocol.http
+                        ? 'HTTP - Direct device communication'
+                        : 'MQTT - Broker-based messaging',
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: provider.communicationProtocol == CommunicationProtocol.http
+                            ? AppTheme.neonBlue.withValues(alpha:0.2)
+                            : AppTheme.neonGreen.withValues(alpha:0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        provider.communicationProtocol.name.toUpperCase(),
+                        style: TextStyle(
+                          color: provider.communicationProtocol == CommunicationProtocol.http
+                              ? AppTheme.neonBlue
+                              : AppTheme.neonGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    onTap: () => _showProtocolDialog(context),
                   ),
-                ),
+                  
+                  // MQTT settings (only show when MQTT is selected)
+                  if (provider.communicationProtocol == CommunicationProtocol.mqtt) ...[
+                    const Divider(height: 24),
+                    
+                    // MQTT Connection Status
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: provider.mqttConnected
+                            ? AppTheme.neonGreen.withValues(alpha:0.1)
+                            : AppTheme.neonRed.withValues(alpha:0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: provider.mqttConnected
+                              ? AppTheme.neonGreen.withValues(alpha:0.3)
+                              : AppTheme.neonRed.withValues(alpha:0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: provider.mqttConnected
+                                  ? AppTheme.neonGreen
+                                  : AppTheme.neonRed,
+                              boxShadow: provider.mqttConnected && isDark
+                                  ? [
+                                      BoxShadow(
+                                        color: AppTheme.neonGreen.withValues(alpha:0.5),
+                                        blurRadius: 8,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              provider.mqttConnected
+                                  ? 'MQTT Broker Connected'
+                                  : 'MQTT Broker Disconnected',
+                              style: TextStyle(
+                                color: provider.mqttConnected
+                                    ? AppTheme.neonGreen
+                                    : AppTheme.neonRed,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // MQTT Broker IP
+                    _SettingsTile(
+                      icon: Icons.dns,
+                      title: 'MQTT Broker IP',
+                      subtitle: provider.mqttBrokerIp,
+                      onTap: () => _showMQTTBrokerDialog(context, isIp: true),
+                    ),
+                    
+                    const Divider(height: 24),
+                    
+                    // MQTT Broker Port
+                    _SettingsTile(
+                      icon: Icons.numbers,
+                      title: 'MQTT Broker Port',
+                      subtitle: '${provider.mqttBrokerPort}',
+                      onTap: () => _showMQTTBrokerDialog(context, isIp: false),
+                    ),
+                    
+                    const Divider(height: 24),
+                    
+                    // Reconnect button
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Reconnecting to MQTT broker...')),
+                        );
+                        await provider.setCommunicationProtocol(CommunicationProtocol.mqtt);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reconnect to Broker'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonCyan.withValues(alpha:0.2),
+                        foregroundColor: AppTheme.neonCyan,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                    ),
+                  ],
+                  
+                  // Info card
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppTheme.circuitLine.withValues(alpha:0.5)
+                          : Colors.grey.withValues(alpha:0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            provider.communicationProtocol == CommunicationProtocol.http
+                                ? 'HTTP mode: Devices need valid IP addresses. Commands sent directly to each device.'
+                                : 'MQTT mode: Devices connect to broker. Supports real-time status updates and manual override detection.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // MQTT Broker IP
-        _SettingsTile(
-          icon: Icons.dns,
-          title: 'MQTT Broker IP',
-          subtitle: provider.mqttBrokerIp,
-          onTap: () => _showMQTTBrokerDialog(context, isIp: true),
-        ),
-        
-        const Divider(height: 24),
-        
-        // MQTT Broker Port
-        _SettingsTile(
-          icon: Icons.numbers,
-          title: 'MQTT Broker Port',
-          subtitle: '${provider.mqttBrokerPort}',
-          onTap: () => _showMQTTBrokerDialog(context, isIp: false),
-        ),
-        
-        const Divider(height: 24),
-        
-        // Reconnect button
-        ElevatedButton.icon(
-          onPressed: () async {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Reconnecting to MQTT broker...')),
-            );
-            await provider.setCommunicationProtocol(CommunicationProtocol.mqtt);
-          },
-          icon: const Icon(Icons.refresh),
-          label: const Text('Reconnect to Broker'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.neonCyan.withValues(alpha:0.2),
-            foregroundColor: AppTheme.neonCyan,
-            minimumSize: const Size(double.infinity, 48),
-          ),
-        ),
-      ],
-      
-      // Info card
-      const SizedBox(height: 16),
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.circuitLine.withValues(alpha:0.5)
-              : Colors.grey.withValues(alpha:0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 20,
-              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                provider.communicationProtocol == CommunicationProtocol.http
-                    ? 'HTTP mode: Devices need valid IP addresses. Commands sent directly to each device.'
-                    : 'MQTT mode: Devices connect to broker. Supports real-time status updates and manual override detection.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             // Wi-Fi Networks
             _SectionHeader(title: 'Wi-Fi Networks'),
@@ -415,97 +418,6 @@ const SizedBox(height: 24),
               ),
             ),
             const SizedBox(height: 24),
-            _SectionHeader(title: 'Communication Protocol'),
-GlassCard(
-  padding: const EdgeInsets.all(16),
-  child: Column(
-    children: [
-      // Protocol selector
-      _SettingsTile(
-        icon: provider.communicationProtocol == CommunicationProtocol.http
-            ? Icons.http
-            : Icons.wifi_tethering,
-        title: 'Communication Protocol',
-        subtitle: provider.communicationProtocol == CommunicationProtocol.http
-            ? 'HTTP - Direct device communication'
-            : 'MQTT - Broker-based messaging',
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: provider.communicationProtocol == CommunicationProtocol.http
-                ? AppTheme.neonBlue.withValues(alpha:0.2)
-                : AppTheme.neonGreen.withValues(alpha:0.2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            provider.communicationProtocol.name.toUpperCase(),
-            style: TextStyle(
-              color: provider.communicationProtocol == CommunicationProtocol.http
-                  ? AppTheme.neonBlue
-                  : AppTheme.neonGreen,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        onTap: () => _showProtocolDialog(context),
-      ),
-      
-      // MQTT settings (only show when MQTT is selected)
-      if (provider.communicationProtocol == CommunicationProtocol.mqtt) ...[
-        const Divider(height: 24),
-        
-        // MQTT Connection Status
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: provider.mqttConnected
-                ? AppTheme.neonGreen.withValues(alpha:0.1)
-                : AppTheme.neonRed.withValues(alpha:0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: provider.mqttConnected
-                  ? AppTheme.neonGreen.withValues(alpha:0.3)
-                  : AppTheme.neonRed.withValues(alpha:0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: provider.mqttConnected
-                      ? AppTheme.neonGreen
-                      : AppTheme.neonRed,
-                  boxShadow: provider.mqttConnected && isDark
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.neonGreen.withValues(alpha:0.5),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  provider.mqttConnected
-                      ? 'MQTT Broker Connected'
-                      : 'MQTT Broker Disconnected',
-                  style: TextStyle(
-                    color: provider.mqttConnected
-                        ? AppTheme.neonGreen
-                        : AppTheme.neonRed,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
 
             // Simulation
             _SectionHeader(title: 'Development'),
@@ -878,13 +790,13 @@ GlassCard(
                         },
                       ),
                       IconButton(
-                      icon: const Icon(Icons.download),
-                      color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-                      onPressed: () async {
-                      Navigator.pop(context);
-                      await FileDownloadHelper.downloadArduinoCode(code, context);
-                            },
-                           ),
+                        icon: const Icon(Icons.download),
+                        color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await FileDownloadHelper.downloadArduinoCode(code, context);
+                        },
+                      ),
                       IconButton(
                         icon: const Icon(Icons.close),
                         color: isDark ? Colors.white54 : Colors.black54,
@@ -897,74 +809,6 @@ GlassCard(
             ),
             const Divider(height: 1),
             
-
-void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
-  final provider = context.read<AppProvider>();
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final controller = TextEditingController(
-    text: isIp ? provider.mqttBrokerIp : provider.mqttBrokerPort.toString(),
-  );
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
-      title: Text(isIp ? 'MQTT Broker IP' : 'MQTT Broker Port'),
-      content: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: isIp ? 'Broker IP Address' : 'Broker Port',
-          prefixIcon: Icon(isIp ? Icons.dns : Icons.numbers),
-          hintText: isIp ? '192.168.1.100' : '1883',
-        ),
-        keyboardType: isIp ? TextInputType.number : TextInputType.number,
-        autofocus: true,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final value = controller.text.trim();
-            if (value.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Please enter a valid ${isIp ? 'IP address' : 'port'}'),
-                ),
-              );
-              return;
-            }
-
-            Navigator.pop(context);
-
-            if (isIp) {
-              await provider.setMQTTBrokerIp(value);
-            } else {
-              final port = int.tryParse(value);
-              if (port != null) {
-                await provider.setMQTTBrokerPort(port);
-              }
-            }
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'MQTT broker ${isIp ? 'IP' : 'port'} updated',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    ),
-  );
-}
             // Code view
             Expanded(
               child: SingleChildScrollView(
@@ -1001,50 +845,28 @@ void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
       ),
     );
   }
-      void _showProtocolDialog(BuildContext context) {
-  final provider = context.read<AppProvider>();
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  
-  CommunicationProtocol selectedProtocol = provider.communicationProtocol;
 
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
+  void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
+    final provider = context.read<AppProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final controller = TextEditingController(
+      text: isIp ? provider.mqttBrokerIp : provider.mqttBrokerPort.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
         backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
-        title: Row(
-          children: [
-            Icon(
-              Icons.swap_horiz,
-              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-            ),
-            const SizedBox(width: 8),
-            const Text('Communication Protocol'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // HTTP Option
-            _ProtocolOption(
-              protocol: CommunicationProtocol.http,
-              icon: Icons.http,
-              title: 'HTTP',
-              description: 'Direct device communication via IP address',
-              isSelected: selectedProtocol == CommunicationProtocol.http,
-              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.http),
-            ),
-            const SizedBox(height: 12),
-            // MQTT Option
-            _ProtocolOption(
-              protocol: CommunicationProtocol.mqtt,
-              icon: Icons.wifi_tethering,
-              title: 'MQTT',
-              description: 'Broker-based messaging with real-time updates',
-              isSelected: selectedProtocol == CommunicationProtocol.mqtt,
-              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.mqtt),
-            ),
-          ],
+        title: Text(isIp ? 'MQTT Broker IP' : 'MQTT Broker Port'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: isIp ? 'Broker IP Address' : 'Broker Port',
+            prefixIcon: Icon(isIp ? Icons.dns : Icons.numbers),
+            hintText: isIp ? '192.168.1.100' : '1883',
+          ),
+          keyboardType: isIp ? TextInputType.number : TextInputType.number,
+          autofocus: true,
         ),
         actions: [
           TextButton(
@@ -1053,52 +875,143 @@ void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              
-              if (selectedProtocol != provider.communicationProtocol) {
-                // Show loading dialog
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => AlertDialog(
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        Text(
-                          selectedProtocol == CommunicationProtocol.mqtt
-                              ? 'Connecting to MQTT broker...'
-                              : 'Switching to HTTP mode...',
-                        ),
-                      ],
-                    ),
+              final value = controller.text.trim();
+              if (value.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter a valid ${isIp ? 'IP address' : 'port'}'),
                   ),
                 );
-                
-                await provider.setCommunicationProtocol(selectedProtocol);
-                
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Switched to ${selectedProtocol.name.toUpperCase()} mode',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                return;
+              }
+
+              Navigator.pop(context);
+
+              if (isIp) {
+                await provider.setMQTTBrokerIp(value);
+              } else {
+                final port = int.tryParse(value);
+                if (port != null) {
+                  await provider.setMQTTBrokerPort(port);
                 }
               }
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'MQTT broker ${isIp ? 'IP' : 'port'} updated',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
-            child: const Text('Apply'),
+            child: const Text('Save'),
           ),
         ],
       ),
-    ),
-  );
-}
+    );
+  }
+
+  void _showProtocolDialog(BuildContext context) {
+    final provider = context.read<AppProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    CommunicationProtocol selectedProtocol = provider.communicationProtocol;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
+          title: Row(
+            children: [
+              Icon(
+                Icons.swap_horiz,
+                color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+              ),
+              const SizedBox(width: 8),
+              const Text('Communication Protocol'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // HTTP Option
+              _ProtocolOption(
+                protocol: CommunicationProtocol.http,
+                icon: Icons.http,
+                title: 'HTTP',
+                description: 'Direct device communication via IP address',
+                isSelected: selectedProtocol == CommunicationProtocol.http,
+                onTap: () => setState(() => selectedProtocol = CommunicationProtocol.http),
+              ),
+              const SizedBox(height: 12),
+              // MQTT Option
+              _ProtocolOption(
+                protocol: CommunicationProtocol.mqtt,
+                icon: Icons.wifi_tethering,
+                title: 'MQTT',
+                description: 'Broker-based messaging with real-time updates',
+                isSelected: selectedProtocol == CommunicationProtocol.mqtt,
+                onTap: () => setState(() => selectedProtocol = CommunicationProtocol.mqtt),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                
+                if (selectedProtocol != provider.communicationProtocol) {
+                  // Show loading dialog
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => AlertDialog(
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            selectedProtocol == CommunicationProtocol.mqtt
+                                ? 'Connecting to MQTT broker...'
+                                : 'Switching to HTTP mode...',
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                  
+                  await provider.setCommunicationProtocol(selectedProtocol);
+                  
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Switched to ${selectedProtocol.name.toUpperCase()} mode',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1384,6 +1297,7 @@ class _ThemeToggle extends StatelessWidget {
     );
   }
 }
+
 class _ProtocolOption extends StatelessWidget {
   final CommunicationProtocol protocol;
   final IconData icon;
@@ -1474,7 +1388,3 @@ class _ProtocolOption extends StatelessWidget {
       ),
     );
   }
-}
-  
-      
-
