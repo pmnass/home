@@ -415,6 +415,97 @@ const SizedBox(height: 24),
               ),
             ),
             const SizedBox(height: 24),
+            _SectionHeader(title: 'Communication Protocol'),
+GlassCard(
+  padding: const EdgeInsets.all(16),
+  child: Column(
+    children: [
+      // Protocol selector
+      _SettingsTile(
+        icon: provider.communicationProtocol == CommunicationProtocol.http
+            ? Icons.http
+            : Icons.wifi_tethering,
+        title: 'Communication Protocol',
+        subtitle: provider.communicationProtocol == CommunicationProtocol.http
+            ? 'HTTP - Direct device communication'
+            : 'MQTT - Broker-based messaging',
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: provider.communicationProtocol == CommunicationProtocol.http
+                ? AppTheme.neonBlue.withValues(alpha:0.2)
+                : AppTheme.neonGreen.withValues(alpha:0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            provider.communicationProtocol.name.toUpperCase(),
+            style: TextStyle(
+              color: provider.communicationProtocol == CommunicationProtocol.http
+                  ? AppTheme.neonBlue
+                  : AppTheme.neonGreen,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        onTap: () => _showProtocolDialog(context),
+      ),
+      
+      // MQTT settings (only show when MQTT is selected)
+      if (provider.communicationProtocol == CommunicationProtocol.mqtt) ...[
+        const Divider(height: 24),
+        
+        // MQTT Connection Status
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: provider.mqttConnected
+                ? AppTheme.neonGreen.withValues(alpha:0.1)
+                : AppTheme.neonRed.withValues(alpha:0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: provider.mqttConnected
+                  ? AppTheme.neonGreen.withValues(alpha:0.3)
+                  : AppTheme.neonRed.withValues(alpha:0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: provider.mqttConnected
+                      ? AppTheme.neonGreen
+                      : AppTheme.neonRed,
+                  boxShadow: provider.mqttConnected && isDark
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.neonGreen.withValues(alpha:0.5),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  provider.mqttConnected
+                      ? 'MQTT Broker Connected'
+                      : 'MQTT Broker Disconnected',
+                  style: TextStyle(
+                    color: provider.mqttConnected
+                        ? AppTheme.neonGreen
+                        : AppTheme.neonRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
 
             // Simulation
             _SectionHeader(title: 'Development'),
