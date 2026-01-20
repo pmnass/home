@@ -137,7 +137,7 @@ List<WifiNetwork> get wifiNetworks => List.unmodifiable(_wifiNetworks);
   }
 
   // Handle incoming MQTT messages
-  void _handleMQTTMessage(MqttMessage message) {
+  void _handleMQTTMessage(AppMqttMessage message) {
     final deviceId = message.deviceId;
     final payload = message.payload;
     
