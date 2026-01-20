@@ -10,8 +10,7 @@ import '../models/room.dart';
 import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
 import '../utils/notification_helper.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
+import '../services/esp_service.dart';
 
 enum AppMode { remote, localAuto }
 
@@ -19,7 +18,7 @@ class AppProvider extends ChangeNotifier {
   // Constants
   static const String authKey = 'hodo8212';
   static const int emergencyStopLevel = 98;
-late MqttServerClient client;
+late EspService _espService;
   // State
   bool _isDarkMode = true;
   bool _isInitialized = false;
@@ -32,6 +31,11 @@ late MqttServerClient client;
   String _appName = 'Home Circuit';
   int _pumpMinThreshold = 20;
   int _pumpMaxThreshold = 80;
+  bool _mqttConnected = false;
+  StreamSubscription? _mqttSubscription;
+  CommunicationProtocol _communicationProtocol = CommunicationProtocol.mqtt;
+  String _mqttBrokerIp = '192.168.1.100';
+  int _mqttBrokerPort = 1883;
 
   List<Device> _devices = [];
   List<Room> _rooms = [];
@@ -66,18 +70,104 @@ late MqttServerClient client;
       _devices.where((d) => d.type == DeviceType.light).toList();
 
   // Initialize
+  // Initialize
   Future<void> initialize() async {
-  await _loadFromStorage();
-  _isInitialized = true;
-  notifyListeners();
+    await _loadFromStorage();
+    
+    // Initialize ESP service
+    _espService = EspService(
+      protocol: _communicationProtocol,
+      mqttBrokerIp: _mqttBrokerIp,
+      mqttBrokerPort: _mqttBrokerPort,
+    );
+    
+    // Setup MQTT listeners if using MQTT
+    if (_communicationProtocol == CommunicationProtocol.mqtt) {
+      await _initializeMQTT();
+    }
+    
+    _isInitialized = true;
+    notifyListeners();
 
-  if (_isSimulationEnabled) {
-    _startSimulation();
+    if (_isSimulationEnabled) {
+      _startSimulation();
+    }
+  }
+  // MQTT Initialization
+  Future<void> _initializeMQTT() async {
+    _mqttConnected = await _espService.connectMQTT();
+    
+    if (_mqttConnected) {
+      // Subscribe to all device status topics
+      for (final device in _devices) {
+        _espService.subscribeMQTT(device.id);
+      }
+      
+      // Listen to incoming MQTT messages
+      _mqttSubscription = _espService.messageStream.listen((message) {
+        _handleMQTTMessage(message);
+      });
+      
+      _addLog(
+        deviceId: 'system',
+        deviceName: 'System',
+        type: LogType.connection,
+        action: 'MQTT connected to broker',
+        details: '$_mqttBrokerIp:$_mqttBrokerPort',
+      );
+    } else {
+      _addLog(
+        deviceId: 'system',
+        deviceName: 'System',
+        type: LogType.error,
+        action: 'MQTT connection failed',
+        details: '$_mqttBrokerIp:$_mqttBrokerPort',
+      );
+    }
+    
+    notifyListeners();
   }
 
-  // ✅ Auto-connect to MQTT broker when app starts
-  await iniMQTT();
-}
+  // Handle incoming MQTT messages
+  void _handleMQTTMessage(MqttMessage message) {
+    final deviceId = message.deviceId;
+    final payload = message.payload;
+    
+    final index = _devices.indexWhere((d) => d.id == deviceId);
+    if (index == -1) return;
+    
+    final device = _devices[index];
+    final actualIsOn = payload == 'ON';
+    
+    // Detect manual override (physical switch pressed)
+    if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
+      _addLog(
+        deviceId: device.id,
+        deviceName: device.name,
+        type: LogType.info,
+        action: 'Manual override detected',
+        details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
+      );
+      
+      if (_notificationsEnabled && device.notificationsEnabled) {
+        NotificationHelper.showDeviceStatusChange(
+          deviceName: device.name,
+          isOn: actualIsOn,
+          reason: 'Manual override detected',
+        );
+      }
+    }
+    
+    // Update device state
+    _devices[index] = device.copyWith(
+      isOnline: true,
+      isOn: actualIsOn,
+      lastSeen: DateTime.now(),
+    );
+    
+    _saveToStorage();
+    notifyListeners();
+  }
 
 // Theme
 void toggleTheme() {
