@@ -48,22 +48,28 @@ late EspService _espService;
   final _uuid = const Uuid();
 
   // Getters
-  bool get isDarkMode => _isDarkMode;
-  bool get isInitialized => _isInitialized;
-  bool get isSyncing => _isSyncing;
-  bool get isSimulationEnabled => _isSimulationEnabled;
-  bool get encryptionEnabled => _encryptionEnabled;
-  bool get notificationsEnabled => _notificationsEnabled;
-  double get syncProgress => _syncProgress;
-  AppMode get appMode => _appMode;
-  String get appName => _appName;
-  int get pumpMinThreshold => _pumpMinThreshold;
-  int get pumpMaxThreshold => _pumpMaxThreshold;
+bool get isDarkMode => _isDarkMode;
+bool get isInitialized => _isInitialized;
+bool get isSyncing => _isSyncing;
+bool get isSimulationEnabled => _isSimulationEnabled;
+bool get encryptionEnabled => _encryptionEnabled;
+bool get notificationsEnabled => _notificationsEnabled;
+double get syncProgress => _syncProgress;
+AppMode get appMode => _appMode;
+String get appName => _appName;
+int get pumpMinThreshold => _pumpMinThreshold;
+int get pumpMaxThreshold => _pumpMaxThreshold;
 
-  List<Device> get devices => List.unmodifiable(_devices);
-  List<Room> get rooms => List.unmodifiable(_rooms);
-  List<LogEntry> get logs => List.unmodifiable(_logs);
-  List<WifiNetwork> get wifiNetworks => List.unmodifiable(_wifiNetworks);
+// ADD THESE NEW GETTERS HERE:
+CommunicationProtocol get communicationProtocol => _communicationProtocol;
+bool get mqttConnected => _mqttConnected;
+String get mqttBrokerIp => _mqttBrokerIp;
+int get mqttBrokerPort => _mqttBrokerPort;
+
+List<Device> get devices => List.unmodifiable(_devices);
+List<Room> get rooms => List.unmodifiable(_rooms);
+List<LogEntry> get logs => List.unmodifiable(_logs);
+List<WifiNetwork> get wifiNetworks => List.unmodifiable(_wifiNetworks);
 
   List<Device> get onlineDevices =>
       _devices.where((d) => d.isOnline).toList();
@@ -254,6 +260,43 @@ void setEncryptionEnabled(bool enabled) {
   _encryptionEnabled = enabled;
   _saveToStorage();
   notifyListeners();
+}
+
+// ADD THIS NEW METHOD HERE:
+// Communication Protocol
+void setCommunicationProtocol(CommunicationProtocol protocol) {
+  _communicationProtocol = protocol;
+  _saveToStorage();
+  notifyListeners();
+  
+  // Reinitialize ESP service with new protocol
+  _espService = EspService(
+    protocol: protocol,
+    mqttBrokerIp: _mqttBrokerIp,
+    mqttBrokerPort: _mqttBrokerPort,
+  );
+  
+  if (protocol == CommunicationProtocol.mqtt) {
+    _initializeMQTT();
+  }
+}
+
+// MQTT Settings
+void setMqttBroker(String ip, int port) {
+  _mqttBrokerIp = ip;
+  _mqttBrokerPort = port;
+  _saveToStorage();
+  notifyListeners();
+  
+  // Reinitialize connection with new settings
+  if (_communicationProtocol == CommunicationProtocol.mqtt) {
+    _espService = EspService(
+      protocol: _communicationProtocol,
+      mqttBrokerIp: _mqttBrokerIp,
+      mqttBrokerPort: _mqttBrokerPort,
+    );
+    _initializeMQTT();
+  }
 }
 
 // Simulation
