@@ -804,6 +804,172 @@ const SizedBox(height: 24),
               ),
             ),
             const Divider(height: 1),
+            void _showProtocolDialog(BuildContext context) {
+  final provider = context.read<AppProvider>();
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  CommunicationProtocol selectedProtocol = provider.communicationProtocol;
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
+        title: Row(
+          children: [
+            Icon(
+              Icons.swap_horiz,
+              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+            ),
+            const SizedBox(width: 8),
+            const Text('Communication Protocol'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // HTTP Option
+            _ProtocolOption(
+              protocol: CommunicationProtocol.http,
+              icon: Icons.http,
+              title: 'HTTP',
+              description: 'Direct device communication via IP address',
+              isSelected: selectedProtocol == CommunicationProtocol.http,
+              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.http),
+            ),
+            const SizedBox(height: 12),
+            // MQTT Option
+            _ProtocolOption(
+              protocol: CommunicationProtocol.mqtt,
+              icon: Icons.wifi_tethering,
+              title: 'MQTT',
+              description: 'Broker-based messaging with real-time updates',
+              isSelected: selectedProtocol == CommunicationProtocol.mqtt,
+              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.mqtt),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              if (selectedProtocol != provider.communicationProtocol) {
+                // Show loading dialog
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          selectedProtocol == CommunicationProtocol.mqtt
+                              ? 'Connecting to MQTT broker...'
+                              : 'Switching to HTTP mode...',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                
+                await provider.setCommunicationProtocol(selectedProtocol);
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Switched to ${selectedProtocol.name.toUpperCase()} mode',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
+  final provider = context.read<AppProvider>();
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final controller = TextEditingController(
+    text: isIp ? provider.mqttBrokerIp : provider.mqttBrokerPort.toString(),
+  );
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
+      title: Text(isIp ? 'MQTT Broker IP' : 'MQTT Broker Port'),
+      content: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: isIp ? 'Broker IP Address' : 'Broker Port',
+          prefixIcon: Icon(isIp ? Icons.dns : Icons.numbers),
+          hintText: isIp ? '192.168.1.100' : '1883',
+        ),
+        keyboardType: isIp ? TextInputType.number : TextInputType.number,
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final value = controller.text.trim();
+            if (value.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please enter a valid ${isIp ? 'IP address' : 'port'}'),
+                ),
+              );
+              return;
+            }
+
+            Navigator.pop(context);
+
+            if (isIp) {
+              await provider.setMQTTBrokerIp(value);
+            } else {
+              final port = int.tryParse(value);
+              if (port != null) {
+                await provider.setMQTTBrokerPort(port);
+              }
+            }
+
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'MQTT broker ${isIp ? 'IP' : 'port'} updated',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+}
             // Code view
             Expanded(
               child: SingleChildScrollView(
@@ -1120,6 +1286,97 @@ class _ThemeToggle extends StatelessWidget {
               color: isDark ? AppTheme.circuitDark : Colors.white,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+class _ProtocolOption extends StatelessWidget {
+  final CommunicationProtocol protocol;
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ProtocolOption({
+    required this.protocol,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = protocol == CommunicationProtocol.http
+        ? AppTheme.neonBlue
+        : AppTheme.neonGreen;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withOpacity(0.2)
+              : (isDark ? AppTheme.circuitLine.withOpacity(0.3) : Colors.grey.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : (isDark ? Colors.white24 : Colors.black12),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(isSelected ? 0.3 : 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isSelected
+                          ? color
+                          : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: color,
+                size: 24,
+              ),
+          ],
         ),
       ),
     );
