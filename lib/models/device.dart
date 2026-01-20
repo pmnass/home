@@ -1,4 +1,5 @@
 // lib/models/device.dart
+import 'package:flutter/material.dart';
 enum DeviceType {
   light,
   fan,
