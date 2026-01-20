@@ -1009,9 +1009,6 @@ void _runSimulation() {
 
       await prefs.setString(
         'devices',
-
-      await prefs.setString(
-        'devices',
         jsonEncode(_devices.map((d) => d.toJson()).toList()),
       );
       await prefs.setString(
