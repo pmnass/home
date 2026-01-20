@@ -264,7 +264,7 @@ void setEncryptionEnabled(bool enabled) {
 
 // ADD THIS NEW METHOD HERE:
 // Communication Protocol
-void setCommunicationProtocol(CommunicationProtocol protocol) {
+Future<void> setCommunicationProtocol(CommunicationProtocol protocol) {
   _communicationProtocol = protocol;
   _saveToStorage();
   notifyListeners();
