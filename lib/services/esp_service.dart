@@ -13,10 +13,10 @@ class EspService {
   final int mqttBrokerPort;
   
   MqttServerClient? _mqttClient;
-  final StreamController<MqttMessage> _messageController = 
-      StreamController<MqttMessage>.broadcast();
+  final StreamController<AppMqttMessage> _messageController = 
+      StreamController<AppMqttMessage>.broadcast();
   
-  Stream<MqttMessage> get messageStream => _messageController.stream;
+  Stream<AppMqttMessage> get messageStream => _messageController.stream;
   
   bool _isConnected = false;
   bool get isConnected => _isConnected;
@@ -259,7 +259,6 @@ class EspService {
       final recMess = message.payload as MqttPublishMessage;
       final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
       
-      // Extract device ID from topic (format: home/DEVICE_ID/status)
       final topic = message.topic;
       final parts = topic.split('/');
       
@@ -268,8 +267,8 @@ class EspService {
         
         print('← Message received from $deviceId: $payload');
         
-        // Emit message to stream
-        _messageController.add(MqttMessage(
+        // Emit message to stream - CHANGED HERE
+        _messageController.add(AppMqttMessage(
           deviceId: deviceId,
           payload: payload,
         ));
@@ -277,9 +276,6 @@ class EspService {
     }
   }
 
-  // ==================== CLEANUP ====================
-  
-  /// Dispose resources
   void dispose() {
     print('Disposing ESP Service...');
     disconnectMQTT();
