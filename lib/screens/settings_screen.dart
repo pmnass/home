@@ -195,6 +195,175 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            _SectionHeader(title: 'Communication Protocol'),
+GlassCard(
+  padding: const EdgeInsets.all(16),
+  child: Column(
+    children: [
+      // Protocol selector
+      _SettingsTile(
+        icon: provider.communicationProtocol == CommunicationProtocol.http
+            ? Icons.http
+            : Icons.wifi_tethering,
+        title: 'Communication Protocol',
+        subtitle: provider.communicationProtocol == CommunicationProtocol.http
+            ? 'HTTP - Direct device communication'
+            : 'MQTT - Broker-based messaging',
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: provider.communicationProtocol == CommunicationProtocol.http
+                ? AppTheme.neonBlue.withOpacity(0.2)
+                : AppTheme.neonGreen.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            provider.communicationProtocol.name.toUpperCase(),
+            style: TextStyle(
+              color: provider.communicationProtocol == CommunicationProtocol.http
+                  ? AppTheme.neonBlue
+                  : AppTheme.neonGreen,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        onTap: () => _showProtocolDialog(context),
+      ),
+      
+      // MQTT settings (only show when MQTT is selected)
+      if (provider.communicationProtocol == CommunicationProtocol.mqtt) ...[
+        const Divider(height: 24),
+        
+        // MQTT Connection Status
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: provider.mqttConnected
+                ? AppTheme.neonGreen.withOpacity(0.1)
+                : AppTheme.neonRed.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: provider.mqttConnected
+                  ? AppTheme.neonGreen.withOpacity(0.3)
+                  : AppTheme.neonRed.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: provider.mqttConnected
+                      ? AppTheme.neonGreen
+                      : AppTheme.neonRed,
+                  boxShadow: provider.mqttConnected && isDark
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.neonGreen.withOpacity(0.5),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  provider.mqttConnected
+                      ? 'MQTT Broker Connected'
+                      : 'MQTT Broker Disconnected',
+                  style: TextStyle(
+                    color: provider.mqttConnected
+                        ? AppTheme.neonGreen
+                        : AppTheme.neonRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // MQTT Broker IP
+        _SettingsTile(
+          icon: Icons.dns,
+          title: 'MQTT Broker IP',
+          subtitle: provider.mqttBrokerIp,
+          onTap: () => _showMQTTBrokerDialog(context, isIp: true),
+        ),
+        
+        const Divider(height: 24),
+        
+        // MQTT Broker Port
+        _SettingsTile(
+          icon: Icons.numbers,
+          title: 'MQTT Broker Port',
+          subtitle: '${provider.mqttBrokerPort}',
+          onTap: () => _showMQTTBrokerDialog(context, isIp: false),
+        ),
+        
+        const Divider(height: 24),
+        
+        // Reconnect button
+        ElevatedButton.icon(
+          onPressed: () async {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reconnecting to MQTT broker...')),
+            );
+            await provider.setCommunicationProtocol(CommunicationProtocol.mqtt);
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Reconnect to Broker'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.neonCyan.withOpacity(0.2),
+            foregroundColor: AppTheme.neonCyan,
+            minimumSize: const Size(double.infinity, 48),
+          ),
+        ),
+      ],
+      
+      // Info card
+      const SizedBox(height: 16),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.circuitLine.withOpacity(0.5)
+              : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 20,
+              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                provider.communicationProtocol == CommunicationProtocol.http
+                    ? 'HTTP mode: Devices need valid IP addresses. Commands sent directly to each device.'
+                    : 'MQTT mode: Devices connect to broker. Supports real-time status updates and manual override detection.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+const SizedBox(height: 24),
 
             // Wi-Fi Networks
             _SectionHeader(title: 'Wi-Fi Networks'),
