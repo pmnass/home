@@ -202,10 +202,12 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     final device = // add_device_screen.dart line 202
 Device(
   id: const Uuid().v4(),
-  name: nameController.text.trim(),
-  type: selectedType,
-  gpioPin: int.tryParse(gpioController.text),
-  statusPin: int.tryParse(statusController.text),
+  name: _nameController.text.trim(),
+  type: _selectedType,
+  gpioPin: int.tryParse(_gpioController.text),
+  statusPin: int.tryParse(_statusGpioController.text),
+   roomId: _selectedRoomId,
+    hasBattery: _hasBattery,   
 );
 
     provider.addDevice(device);
