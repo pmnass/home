@@ -1,115 +1,142 @@
-// lib/services/esp_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import '../models/mqtt_message.dart';
 
 enum CommunicationProtocol { http, mqtt }
 
 class EspService {
-  CommunicationProtocol protocol;
-  String? mqttBrokerIp;
-  int mqttBrokerPort;
+  final CommunicationProtocol protocol;
+  final String mqttBrokerIp;
+  final int mqttBrokerPort;
   
   MqttServerClient? _mqttClient;
-  final _messageController = StreamController<DeviceMessage>.broadcast();
+  final StreamController<MqttMessage> _messageController = 
+      StreamController<MqttMessage>.broadcast();
   
-  Stream<DeviceMessage> get messageStream => _messageController.stream;
-  bool get isConnected => protocol == CommunicationProtocol.mqtt 
-      ? (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected)
-      : true;
+  Stream<MqttMessage> get messageStream => _messageController.stream;
+  
+  bool _isConnected = false;
+  bool get isConnected => _isConnected;
 
   EspService({
-    this.protocol = CommunicationProtocol.http,
-    this.mqttBrokerIp,
-    this.mqttBrokerPort = 1883,
+    required this.protocol,
+    required this.mqttBrokerIp,
+    required this.mqttBrokerPort,
   });
 
-  // ==================== MQTT Methods ====================
+  // ==================== MQTT METHODS ====================
   
+  /// Connect to MQTT broker
   Future<bool> connectMQTT() async {
-    if (protocol != CommunicationProtocol.mqtt || mqttBrokerIp == null) {
+    if (protocol != CommunicationProtocol.mqtt) {
+      print('Cannot connect MQTT: Protocol is set to HTTP');
       return false;
     }
-
+    
     try {
-      _mqttClient = MqttServerClient(mqttBrokerIp!, '');
+      // Create unique client ID
+      final clientId = 'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
+      
+      _mqttClient = MqttServerClient(mqttBrokerIp, clientId);
       _mqttClient!.port = mqttBrokerPort;
+      _mqttClient!.keepAlivePeriod = 60;
+      _mqttClient!.autoReconnect = true;
       _mqttClient!.logging(on: false);
-      _mqttClient!.keepAlivePeriod = 20;
-      _mqttClient!.onDisconnected = _onMqttDisconnected;
-      _mqttClient!.onConnected = _onMqttConnected;
-      _mqttClient!.onSubscribed = _onMqttSubscribed;
-
+      
+      // Set up callbacks
+      _mqttClient!.onConnected = _onConnected;
+      _mqttClient!.onDisconnected = _onDisconnected;
+      _mqttClient!.onSubscribed = _onSubscribed;
+      _mqttClient!.onAutoReconnect = _onAutoReconnect;
+      _mqttClient!.onAutoReconnected = _onAutoReconnected;
+      
+      // Create connection message
       final connMessage = MqttConnectMessage()
-          .withClientIdentifier('flutter_client_${DateTime.now().millisecondsSinceEpoch}')
+          .withClientIdentifier(clientId)
           .startClean()
-          .withWillQos(MqttQos.atMostOnce);
-
+          .withWillQos(MqttQos.atLeastOnce);
+      
       _mqttClient!.connectionMessage = connMessage;
-
+      
+      print('Connecting to MQTT broker at $mqttBrokerIp:$mqttBrokerPort...');
+      
+      // Attempt connection
       await _mqttClient!.connect();
       
-      if (_mqttClient!.connectionStatus?.state == MqttConnectionState.connected) {
-        _setupMqttListeners();
+      if (_mqttClient!.connectionStatus!.state == MqttConnectionState.connected) {
+        print('MQTT Connected successfully');
+        _isConnected = true;
+        
+        // Listen to incoming messages
+        _mqttClient!.updates!.listen(_onMessage);
+        
         return true;
+      } else {
+        print('MQTT Connection failed - status: ${_mqttClient!.connectionStatus}');
+        _isConnected = false;
+        _mqttClient!.disconnect();
+        return false;
       }
-      
-      return false;
     } catch (e) {
       print('MQTT connection error: $e');
+      _isConnected = false;
       _mqttClient?.disconnect();
       return false;
     }
   }
 
-  void _setupMqttListeners() {
-    _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
-      final MqttPublishMessage message = c[0].payload as MqttPublishMessage;
-      final payload = MqttPublishPayload.bytesToStringAsString(message.payload.message);
-      final topic = c[0].topic;
-
-      // Parse topic: home/{deviceId}/status
-      final parts = topic.split('/');
-      if (parts.length >= 3 && parts[0] == 'home' && parts[2] == 'status') {
-        final deviceId = parts[1];
-        _messageController.add(DeviceMessage(
-          deviceId: deviceId,
-          topic: topic,
-          payload: payload,
-          timestamp: DateTime.now(),
-        ));
-      }
-    });
+  /// Disconnect from MQTT broker
+  void disconnectMQTT() {
+    if (_mqttClient != null) {
+      print('Disconnecting from MQTT broker...');
+      _mqttClient!.disconnect();
+      _isConnected = false;
+    }
   }
 
+  /// Subscribe to device status topic
   void subscribeMQTT(String deviceId) {
-    if (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected) {
-      _mqttClient!.subscribe('home/$deviceId/status', MqttQos.atMostOnce);
+    if (_mqttClient == null || 
+        _mqttClient!.connectionStatus!.state != MqttConnectionState.connected) {
+      print('Cannot subscribe: MQTT not connected');
+      return;
     }
+    
+    final topic = 'home/$deviceId/status';
+    print('Subscribing to topic: $topic');
+    _mqttClient!.subscribe(topic, MqttQos.atLeastOnce);
   }
 
+  /// Unsubscribe from device topic
   void unsubscribeMQTT(String deviceId) {
-    if (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected) {
-      _mqttClient!.unsubscribe('home/$deviceId/status');
+    if (_mqttClient == null || 
+        _mqttClient!.connectionStatus!.state != MqttConnectionState.connected) {
+      return;
     }
+    
+    final topic = 'home/$deviceId/status';
+    print('Unsubscribing from topic: $topic');
+    _mqttClient!.unsubscribe(topic);
   }
 
-  Future<bool> sendMQTTCommand(String deviceId, String command) async {
-    if (_mqttClient?.connectionStatus?.state != MqttConnectionState.connected) {
+  /// Publish command to device via MQTT
+  Future<bool> publishMQTT(String deviceId, String command) async {
+    if (_mqttClient == null || 
+        _mqttClient!.connectionStatus!.state != MqttConnectionState.connected) {
+      print('Cannot publish: MQTT not connected');
       return false;
     }
-
+    
     try {
+      final topic = 'home/$deviceId/set';
       final builder = MqttClientPayloadBuilder();
       builder.addString(command);
       
-      _mqttClient!.publishMessage(
-        'home/$deviceId/set',
-        MqttQos.atMostOnce,
-        builder.payload!,
-      );
+      print('Publishing to $topic: $command');
+      _mqttClient!.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
       
       return true;
     } catch (e) {
@@ -118,141 +145,152 @@ class EspService {
     }
   }
 
-  void disconnectMQTT() {
-    _mqttClient?.disconnect();
-    _mqttClient = null;
-  }
-
-  void _onMqttConnected() {
-    print('MQTT connected');
-  }
-
-  void _onMqttDisconnected() {
-    print('MQTT disconnected');
-  }
-
-  void _onMqttSubscribed(String topic) {
-    print('Subscribed to: $topic');
-  }
-
-  // ==================== HTTP Methods ====================
-
-  Future<DeviceStatusResponse?> getHTTPStatus(String ipAddress) async {
-    if (protocol != CommunicationProtocol.http) {
-      return null;
-    }
-
-    try {
-      final response = await http
-          .get(Uri.parse('http://$ipAddress/status'))
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return DeviceStatusResponse(
-          isOn: data['state'] == 'ON',
-          isOnline: true,
-          brightness: data['brightness'],
-          fanSpeed: data['fanSpeed'],
-          waterLevel: data['waterLevel'],
-          lpgValue: data['lpgValue']?.toDouble(),
-          coValue: data['coValue']?.toDouble(),
-        );
-      }
-    } catch (e) {
-      print('HTTP status error for $ipAddress: $e');
-    }
-    
-    return null;
-  }
-
-  Future<bool> sendHTTPCommand(String ipAddress, String command, {Map<String, dynamic>? data}) async {
-    if (protocol != CommunicationProtocol.http) {
+  // ==================== HTTP METHODS ====================
+  
+  /// Send command via HTTP
+  Future<bool> sendHttpCommand(String ipAddress, String command) async {
+    if (ipAddress.isEmpty) {
+      print('Cannot send HTTP command: IP address is empty');
       return false;
     }
-
+    
     try {
-      final body = data ?? {'state': command};
+      final url = Uri.parse('http://$ipAddress/control?state=$command');
+      print('Sending HTTP command to $url');
       
-      final response = await http
-          .post(
-            Uri.parse('http://$ipAddress/control'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 5));
-
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
+      
+      print('HTTP response: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
-      print('HTTP command error for $ipAddress: $e');
+      print('HTTP command error: $e');
       return false;
     }
   }
 
-  // ==================== Unified Interface ====================
+  /// Get device status via HTTP
+  Future<Map<String, dynamic>?> getDeviceStatus(String deviceId, String ipAddress) async {
+    if (ipAddress.isEmpty) {
+      print('Cannot get status: IP address is empty');
+      return null;
+    }
+    
+    try {
+      final url = Uri.parse('http://$ipAddress/status');
+      print('Getting status from $url');
+      
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        print('Status response: ${response.body}');
+        
+        // Try to parse JSON response
+        try {
+          final data = jsonDecode(response.body);
+          return {
+            'state': data['state'] ?? 'OFF',
+            'online': true,
+          };
+        } catch (_) {
+          // If not JSON, check for simple ON/OFF response
+          return {
+            'state': response.body.toUpperCase().contains('ON') ? 'ON' : 'OFF',
+            'online': true,
+          };
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      print('Get status error: $e');
+      return null;
+    }
+  }
 
-  Future<bool> sendCommand(String deviceId, String ipAddress, String command, {Map<String, dynamic>? data}) async {
+  // ==================== UNIFIED METHODS ====================
+  
+  /// Send command (supports both HTTP and MQTT)
+  Future<bool> sendCommand(String deviceId, String ipAddress, String command) async {
     if (protocol == CommunicationProtocol.mqtt) {
-      return await sendMQTTCommand(deviceId, command);
+      return await publishMQTT(deviceId, command);
     } else {
-      return await sendHTTPCommand(ipAddress, command, data: data);
+      return await sendHttpCommand(ipAddress, command);
     }
   }
 
-  Future<DeviceStatusResponse?> getStatus(String deviceId, String ipAddress) async {
-    if (protocol == CommunicationProtocol.http) {
-      return await getHTTPStatus(ipAddress);
-    }
-    // For MQTT, status comes via subscriptions
-    return null;
+  // ==================== MQTT CALLBACKS ====================
+  
+  void _onConnected() {
+    print('✓ MQTT Connected');
+    _isConnected = true;
   }
 
-  void switchProtocol(CommunicationProtocol newProtocol) {
-    if (protocol == newProtocol) return;
-    
-    if (protocol == CommunicationProtocol.mqtt) {
-      disconnectMQTT();
-    }
-    
-    protocol = newProtocol;
+  void _onDisconnected() {
+    print('✗ MQTT Disconnected');
+    _isConnected = false;
   }
 
+  void _onSubscribed(String topic) {
+    print('✓ Subscribed to: $topic');
+  }
+
+  void _onAutoReconnect() {
+    print('⟳ MQTT Auto-reconnecting...');
+  }
+
+  void _onAutoReconnected() {
+    print('✓ MQTT Auto-reconnected');
+    _isConnected = true;
+  }
+
+  /// Handle incoming MQTT messages
+  void _onMessage(List<MqttReceivedMessage<MqttMessage>> messages) {
+    for (final message in messages) {
+      final recMess = message.payload as MqttPublishMessage;
+      final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+      
+      // Extract device ID from topic (format: home/DEVICE_ID/status)
+      final topic = message.topic;
+      final parts = topic.split('/');
+      
+      if (parts.length >= 2) {
+        final deviceId = parts[1];
+        
+        print('← Message received from $deviceId: $payload');
+        
+        // Emit message to stream
+        _messageController.add(MqttMessage(
+          deviceId: deviceId,
+          payload: payload,
+        ));
+      }
+    }
+  }
+
+  // ==================== CLEANUP ====================
+  
+  /// Dispose resources
   void dispose() {
+    print('Disposing ESP Service...');
     disconnectMQTT();
     _messageController.close();
   }
 }
 
-class DeviceMessage {
-  final String deviceId;
-  final String topic;
-  final String payload;
-  final DateTime timestamp;
-
-  DeviceMessage({
-    required this.deviceId,
-    required this.topic,
-    required this.payload,
-    required this.timestamp,
-  });
-}
-
-class DeviceStatusResponse {
-  final bool isOn;
-  final bool isOnline;
-  final int? brightness;
-  final int? fanSpeed;
-  final int? waterLevel;
-  final double? lpgValue;
-  final double? coValue;
-
-  DeviceStatusResponse({
-    required this.isOn,
-    required this.isOnline,
-    this.brightness,
-    this.fanSpeed,
-    this.waterLevel,
-    this.lpgValue,
-    this.coValue,
-  });
+class TimeoutException implements Exception {
+  final String message;
+  TimeoutException(this.message);
+  
+  @override
+  String toString() => message;
 }
