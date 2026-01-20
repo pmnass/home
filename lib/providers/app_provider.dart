@@ -264,21 +264,36 @@ void setEncryptionEnabled(bool enabled) {
 
 // ADD THIS NEW METHOD HERE:
 // Communication Protocol
-Future<void> setCommunicationProtocol(CommunicationProtocol protocol) {
+Future<void> setCommunicationProtocol(CommunicationProtocol protocol) async {  // ✅ Add async
+  if (_communicationProtocol == protocol) return;  // ✅ Early return if same
+
+  final oldProtocol = _communicationProtocol;
   _communicationProtocol = protocol;
-  _saveToStorage();
-  notifyListeners();
   
-  // Reinitialize ESP service with new protocol
-  _espService = EspService(
-    protocol: protocol,
-    mqttBrokerIp: _mqttBrokerIp,
-    mqttBrokerPort: _mqttBrokerPort,
-  );
+  // Cleanup old protocol
+  if (oldProtocol == CommunicationProtocol.mqtt) {
+    _mqttSubscription?.cancel();
+    _espService.disconnectMQTT();
+    _mqttConnected = false;
+  }
+  
+  // Setup new protocol
+  _espService.switchProtocol(protocol);
   
   if (protocol == CommunicationProtocol.mqtt) {
-    _initializeMQTT();
+    await _initializeMQTT();  // ✅ await this
   }
+  
+  _addLog(
+    deviceId: 'system',
+    deviceName: 'System',
+    type: LogType.info,
+    action: 'Communication protocol changed',
+    details: '${oldProtocol.name} → ${protocol.name}',
+  );
+  
+  await _saveToStorage();  // ✅ await this
+  notifyListeners();
 }
 
 // MQTT Settings
