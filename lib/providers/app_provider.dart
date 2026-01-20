@@ -11,6 +11,8 @@ import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
 import '../utils/notification_helper.dart';
 import '../services/esp_service.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import '../models/mqtt_message.dart';
 
 enum AppMode { remote, localAuto }
 
