@@ -440,63 +440,73 @@ void _runSimulation() {
   }
 
   // Master Switch
+  // Master Switch
   Future<bool> masterSwitch(String key, bool turnOn) async {
-  if (key != authKey) return false;
+    if (key != authKey) return false;
 
-  final lights = lightDevices;
-  int successCount = 0;
-  int failCount = 0;
+    final lights = lightDevices;
+    int successCount = 0;
+    int failCount = 0;
 
-  for (final light in lights) {
-    try {
-      // Build MQTT payload
-      final builder = MqttClientPayloadBuilder();
-      builder.addString(turnOn ? 'ON' : 'OFF');
+    for (final light in lights) {
+      try {
+        // Send command via ESP service (supports both MQTT and HTTP)
+        final command = turnOn ? 'ON' : 'OFF';
+        final success = await _espService.sendCommand(
+          light.id,
+          light.ipAddress ?? '',
+          command,
+        );
 
-      // Publish to broker: home/<deviceId>/set
-      client.publishMessage(
-        'home/${light.id}/set',
-        MqttQos.atMostOnce,
-        builder.payload!,
-      );
+        if (success) {
+          // Update local state immediately
+          final index = _devices.indexWhere((d) => d.id == light.id);
+          if (index != -1) {
+            _devices[index] = _devices[index].copyWith(isOn: turnOn);
+            successCount++;
+          }
 
-      // Update local state immediately
-      final index = _devices.indexWhere((d) => d.id == light.id);
-      if (index != -1) {
-        _devices[index] = _devices[index].copyWith(isOn: turnOn);
-        successCount++;
+          _addLog(
+            deviceId: light.id,
+            deviceName: light.name,
+            type: turnOn ? LogType.deviceOn : LogType.deviceOff,
+            action: 'Master Switch: ${turnOn ? 'ON' : 'OFF'}',
+            details: 'via ${_communicationProtocol.name.toUpperCase()}',
+          );
+        } else {
+          failCount++;
+          _addLog(
+            deviceId: light.id,
+            deviceName: light.name,
+            type: LogType.error,
+            action: 'Master Switch command failed',
+            details: 'No response from device',
+          );
+        }
+      } catch (e) {
+        failCount++;
+        _addLog(
+          deviceId: light.id,
+          deviceName: light.name,
+          type: LogType.error,
+          action: 'Master Switch command failed',
+          details: e.toString(),
+        );
       }
-
-      _addLog(
-        deviceId: light.id,
-        deviceName: light.name,
-        type: turnOn ? LogType.deviceOn : LogType.deviceOff,
-        action: 'Master Switch: ${turnOn ? 'ON' : 'OFF'}',
-      );
-    } catch (e) {
-      failCount++;
-      _addLog(
-        deviceId: light.id,
-        deviceName: light.name,
-        type: LogType.error,
-        action: 'Master Switch command failed',
-        details: e.toString(),
-      );
     }
+
+    _addLog(
+      deviceId: 'system',
+      deviceName: 'System',
+      type: LogType.info,
+      action: 'Master Switch completed',
+      details: 'Success: $successCount, Failed: $failCount',
+    );
+
+    _saveToStorage();
+    notifyListeners();
+    return failCount == 0;
   }
-
-  _addLog(
-    deviceId: 'system',
-    deviceName: 'System',
-    type: LogType.info,
-    action: 'Master Switch completed',
-    details: 'Success: $successCount, Failed: $failCount',
-  );
-
-  _saveToStorage();
-  notifyListeners();
-  return failCount == 0;
-}
 
   // Device Management
   void addDevice(Device device) {
@@ -535,53 +545,63 @@ void _runSimulation() {
   }
 
   Future<bool> toggleDevice(String id) async {
-  final index = _devices.indexWhere((d) => d.id == id);
-  if (index == -1) return false;
+    final index = _devices.indexWhere((d) => d.id == id);
+    if (index == -1) return false;
 
-  if (_appMode == AppMode.localAuto) {
-    return false; // Can't control in local auto mode
+    if (_appMode == AppMode.localAuto) {
+      return false; // Can't control in local auto mode
+    }
+
+    final device = _devices[index];
+    final newState = !device.isOn;
+
+    try {
+      // Send command via ESP service
+      final command = newState ? 'ON' : 'OFF';
+      final success = await _espService.sendCommand(
+        device.id,
+        device.ipAddress ?? '',
+        command,
+      );
+
+      if (success) {
+        // Update local state immediately
+        _devices[index] = device.copyWith(isOn: newState);
+
+        _addLog(
+          deviceId: device.id,
+          deviceName: device.name,
+          type: newState ? LogType.deviceOn : LogType.deviceOff,
+          action: newState ? 'Turned ON' : 'Turned OFF',
+          details: 'via ${_communicationProtocol.name.toUpperCase()}',
+        );
+
+        _saveToStorage();
+        notifyListeners();
+        return true;
+      } else {
+        _addLog(
+          deviceId: device.id,
+          deviceName: device.name,
+          type: LogType.error,
+          action: 'Command failed',
+          details: 'No response from device',
+        );
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _addLog(
+        deviceId: device.id,
+        deviceName: device.name,
+        type: LogType.error,
+        action: 'Command failed',
+        details: e.toString(),
+      );
+      notifyListeners();
+      return false;
+    }
   }
-
-  final device = _devices[index];
-  final newState = !device.isOn;
-
-  try {
-    // Build MQTT payload
-    final builder = MqttClientPayloadBuilder();
-    builder.addString(newState ? 'ON' : 'OFF');
-
-    // Publish to broker: home/<deviceId>/set
-    client.publishMessage(
-      'home/$id/set',
-      MqttQos.atMostOnce,
-      builder.payload!,
-    );
-
-    // Update local state immediately
-    _devices[index] = device.copyWith(isOn: newState);
-
-    _addLog(
-      deviceId: device.id,
-      deviceName: device.name,
-      type: newState ? LogType.deviceOn : LogType.deviceOff,
-      action: newState ? 'Turned ON' : 'Turned OFF',
-    );
-
-    _saveToStorage();
-    notifyListeners();
-    return true;
-  } catch (e) {
-    _addLog(
-      deviceId: device.id,
-      deviceName: device.name,
-      type: LogType.error,
-      action: 'MQTT publish failed',
-      details: e.toString(),
-    );
-    notifyListeners();
-    return false;
-  }
-}
 
   void setBrightness(String id, int brightness) {
     final index = _devices.indexWhere((d) => d.id == id);
@@ -778,8 +798,9 @@ void _runSimulation() {
   buffer.writeln();
 
   buffer.writeln('// ========== MQTT CONFIGURATION ==========');
-  buffer.writeln('const char* MQTT_SERVER = "192.168.1.100"; // ESP32 broker IP');
-  buffer.writeln('const int   MQTT_PORT   = 1883;');
+  buffer.writeln('// ========== MQTT CONFIGURATION ==========');
+  buffer.writeln('const char* MQTT_SERVER = "$_mqttBrokerIp"; // MQTT broker IP');
+  buffer.writeln('const int   MQTT_PORT   = $_mqttBrokerPort;');
   buffer.writeln('WiFiClient espClient;');
   buffer.writeln('PubSubClient client(espClient);');
   buffer.writeln();
@@ -881,6 +902,11 @@ void _runSimulation() {
       _isSimulationEnabled = prefs.getBool('isSimulationEnabled') ?? false;
       _encryptionEnabled = prefs.getBool('encryptionEnabled') ?? false;
       _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+      _communicationProtocol = CommunicationProtocol.values[
+        prefs.getInt('communicationProtocol') ?? CommunicationProtocol.mqtt.index
+      ];
+      _mqttBrokerIp = prefs.getString('mqttBrokerIp') ?? '192.168.1.100';
+      _mqttBrokerPort = prefs.getInt('mqttBrokerPort') ?? 1883;
 
       // Load devices
       final devicesJson = prefs.getString('devices');
@@ -932,6 +958,12 @@ void _runSimulation() {
       await prefs.setBool('isSimulationEnabled', _isSimulationEnabled);
       await prefs.setBool('encryptionEnabled', _encryptionEnabled);
       await prefs.setBool('notificationsEnabled', _notificationsEnabled);
+       await prefs.setInt('communicationProtocol', _communicationProtocol.index);
+      await prefs.setString('mqttBrokerIp', _mqttBrokerIp);
+      await prefs.setInt('mqttBrokerPort', _mqttBrokerPort);
+
+      await prefs.setString(
+        'devices',
 
       await prefs.setString(
         'devices',
@@ -1054,6 +1086,8 @@ String generateUuid() => _uuid.v4();
 @override
 void dispose() {
   _simulationTimer?.cancel();
+  _mqttSubscription?.cancel();      // ✅ ADD THIS LINE
+  _espService.dispose();
   super.dispose();
 }
 }
