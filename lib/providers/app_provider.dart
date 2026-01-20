@@ -361,87 +361,83 @@ void _runSimulation() {
 }
 
 // Sync
-   Future<void> syncDevices() async {
-  _isSyncing = true;
-  _syncProgress = 0;
-  notifyListeners();
-
-  _addLog(
-    deviceId: 'system',
-    deviceName: 'System',
-    type: LogType.sync,
-    action: 'MQTT sync started',
-  );
-
-  try {
-    // Subscribe to all device status topics
-    for (final device in _devices) {
-      client.subscribe('home/${device.id}/status', MqttQos.atMostOnce);
-    }
-
-    // Listen for incoming MQTT messages
-    client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
-      final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
-      final String message =
-          MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-
-      final topic = c[0].topic; // e.g. home/device1/status
-      final deviceId = topic.split('/')[1];
-
-      final index = _devices.indexWhere((d) => d.id == deviceId);
-      if (index != -1) {
-        final device = _devices[index];
-        final actualIsOn = message == 'ON';
-
-        // Detect manual override
-        if (actualIsOn != device.isOn && device.shouldHaveStatusPin) {
-          _addLog(
-            deviceId: device.id,
-            deviceName: device.name,
-            type: LogType.info,
-            action: 'Manual override detected',
-            details: 'Device ${actualIsOn ? 'turned ON' : 'turned OFF'} manually',
-          );
-
-          if (_notificationsEnabled && device.notificationsEnabled) {
-            NotificationHelper.showDeviceStatusChange(
-              deviceName: device.name,
-              isOn: actualIsOn,
-              reason: 'Manual override detected',
-            );
-          }
-        }
-
-        // Update device state
-        _devices[index] = device.copyWith(
-          isOnline: true,
-          isOn: actualIsOn,
-          lastSeen: DateTime.now(),
-        );
-        notifyListeners();
-      }
-    });
+   // Sync devices with broker
+  Future<void> syncDevices() async {
+    _isSyncing = true;
+    _syncProgress = 0;
+    notifyListeners();
 
     _addLog(
       deviceId: 'system',
       deviceName: 'System',
       type: LogType.sync,
-      action: 'MQTT sync listening',
+      action: 'Device sync started',
     );
-  } catch (e) {
-    _addLog(
-      deviceId: 'system',
-      deviceName: 'System',
-      type: LogType.error,
-      action: 'MQTT sync failed',
-      details: e.toString(),
-    );
-  }
 
-  _isSyncing = false;
-  _saveToStorage();
-  notifyListeners();
-}
+    try {
+      if (_communicationProtocol == CommunicationProtocol.mqtt) {
+        // Re-subscribe to ensure all devices are tracked
+        for (final device in _devices) {
+          _espService.subscribeMQTT(device.id);
+        }
+        
+        _addLog(
+          deviceId: 'system',
+          deviceName: 'System',
+          type: LogType.sync,
+          action: 'MQTT subscriptions updated',
+          details: '${_devices.length} devices',
+        );
+      } else {
+        // HTTP: Poll each device for status
+        for (int i = 0; i < _devices.length; i++) {
+          final device = _devices[i];
+          _syncProgress = (i + 1) / _devices.length;
+          notifyListeners();
+          
+          if (device.ipAddress != null) {
+            final status = await _espService.getDeviceStatus(
+              device.id,
+              device.ipAddress!,
+            );
+            
+            if (status != null) {
+              final index = _devices.indexWhere((d) => d.id == device.id);
+              if (index != -1) {
+                _devices[index] = _devices[index].copyWith(
+                  isOnline: true,
+                  isOn: status['state'] == 'ON',
+                  lastSeen: DateTime.now(),
+                );
+              }
+            }
+          }
+        }
+        
+        _addLog(
+          deviceId: 'system',
+          deviceName: 'System',
+          type: LogType.sync,
+          action: 'HTTP device polling completed',
+          details: '${_devices.length} devices checked',
+        );
+      }
+      
+      _syncProgress = 1.0;
+      _saveToStorage();
+    } catch (e) {
+      _addLog(
+        deviceId: 'system',
+        deviceName: 'System',
+        type: LogType.error,
+        action: 'Sync failed',
+        details: e.toString(),
+      );
+    }
+
+    _isSyncing = false;
+    notifyListeners();
+  }
 
   // Master Switch
   Future<bool> masterSwitch(String key, bool turnOn) async {
