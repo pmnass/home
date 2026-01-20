@@ -896,104 +896,7 @@ GlassCard(
               ),
             ),
             const Divider(height: 1),
-            void _showProtocolDialog(BuildContext context) {
-  final provider = context.read<AppProvider>();
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  
-  CommunicationProtocol selectedProtocol = provider.communicationProtocol;
-
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
-        title: Row(
-          children: [
-            Icon(
-              Icons.swap_horiz,
-              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
-            ),
-            const SizedBox(width: 8),
-            const Text('Communication Protocol'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // HTTP Option
-            _ProtocolOption(
-              protocol: CommunicationProtocol.http,
-              icon: Icons.http,
-              title: 'HTTP',
-              description: 'Direct device communication via IP address',
-              isSelected: selectedProtocol == CommunicationProtocol.http,
-              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.http),
-            ),
-            const SizedBox(height: 12),
-            // MQTT Option
-            _ProtocolOption(
-              protocol: CommunicationProtocol.mqtt,
-              icon: Icons.wifi_tethering,
-              title: 'MQTT',
-              description: 'Broker-based messaging with real-time updates',
-              isSelected: selectedProtocol == CommunicationProtocol.mqtt,
-              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.mqtt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              if (selectedProtocol != provider.communicationProtocol) {
-                // Show loading dialog
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => AlertDialog(
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        Text(
-                          selectedProtocol == CommunicationProtocol.mqtt
-                              ? 'Connecting to MQTT broker...'
-                              : 'Switching to HTTP mode...',
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-                
-                await provider.setCommunicationProtocol(selectedProtocol);
-                
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Switched to ${selectedProtocol.name.toUpperCase()} mode',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+            
 
 void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
   final provider = context.read<AppProvider>();
@@ -1098,6 +1001,104 @@ void _showMQTTBrokerDialog(BuildContext context, {required bool isIp}) {
       ),
     );
   }
+      void _showProtocolDialog(BuildContext context) {
+  final provider = context.read<AppProvider>();
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  CommunicationProtocol selectedProtocol = provider.communicationProtocol;
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.circuitDarkAlt : Colors.white,
+        title: Row(
+          children: [
+            Icon(
+              Icons.swap_horiz,
+              color: isDark ? AppTheme.neonCyan : Theme.of(context).primaryColor,
+            ),
+            const SizedBox(width: 8),
+            const Text('Communication Protocol'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // HTTP Option
+            _ProtocolOption(
+              protocol: CommunicationProtocol.http,
+              icon: Icons.http,
+              title: 'HTTP',
+              description: 'Direct device communication via IP address',
+              isSelected: selectedProtocol == CommunicationProtocol.http,
+              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.http),
+            ),
+            const SizedBox(height: 12),
+            // MQTT Option
+            _ProtocolOption(
+              protocol: CommunicationProtocol.mqtt,
+              icon: Icons.wifi_tethering,
+              title: 'MQTT',
+              description: 'Broker-based messaging with real-time updates',
+              isSelected: selectedProtocol == CommunicationProtocol.mqtt,
+              onTap: () => setState(() => selectedProtocol = CommunicationProtocol.mqtt),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              if (selectedProtocol != provider.communicationProtocol) {
+                // Show loading dialog
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          selectedProtocol == CommunicationProtocol.mqtt
+                              ? 'Connecting to MQTT broker...'
+                              : 'Switching to HTTP mode...',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                
+                await provider.setCommunicationProtocol(selectedProtocol);
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Switched to ${selectedProtocol.name.toUpperCase()} mode',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }
 
 class _SectionHeader extends StatelessWidget {
