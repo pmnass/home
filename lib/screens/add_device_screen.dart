@@ -197,7 +197,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<AppProvider>();
-    final uuid = const Uuid();
+  
 
     final device = // add_device_screen.dart line 202
 Device(
