@@ -11,7 +11,6 @@ import '../models/log_entry.dart';
 import '../models/wifi_network.dart';
 import '../utils/notification_helper.dart';
 import '../services/esp_service.dart';
-import 'package:mqtt_client/mqtt_client.dart';
 import '../models/mqtt_message.dart';
 
 enum AppMode { remote, localAuto }
@@ -306,7 +305,11 @@ Future<void> setMQTTBrokerIp(String ip) async {
     _espService.disconnectMQTT();
     _mqttConnected = false;
     
-    _espService.mqttBrokerIp = ip;
+    _espService = EspService(
+  protocol: _communicationProtocol,
+  mqttBrokerIp: ip,              // ✅ NEW ip (parameter)
+  mqttBrokerPort: _mqttBrokerPort,  // ✅ OLD port (keep existing)
+);
     await _initializeMQTT();
   }
   
@@ -323,7 +326,11 @@ Future<void> setMQTTBrokerPort(int port) async {
     _espService.disconnectMQTT();
     _mqttConnected = false;
     
-    _espService.mqttBrokerPort = port;
+    _espService = EspService(
+  protocol: _communicationProtocol,
+  mqttBrokerIp: _mqttBrokerIp,      // ✅ OLD ip (keep existing)
+  mqttBrokerPort: port,              // ✅ NEW port (parameter)
+);
     await _initializeMQTT();
   }
   
