@@ -58,7 +58,6 @@ class DeviceListScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => DeviceDetailScreen(
-                    ip: device.ipAddress ?? '',
                     name: device.name,
                   ),
                 ),
