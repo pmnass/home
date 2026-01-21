@@ -596,7 +596,7 @@ class _GasValueMini extends StatelessWidget {
             ),
           ),
           Text(
-            '${value.toStringAsFixed(1)}',
+  value.toStringAsFixed(1),
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.bold,
