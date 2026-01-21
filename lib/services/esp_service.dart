@@ -40,7 +40,7 @@ class EspService {
       // Create unique client ID
       final clientId = 'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
       
-      _mqttClient = MqttServerClient(mqttBrokerIp, clientId);
+      _mqttClient = MqttServerClient(mqttBrokerIp!, '');
       _mqttClient!.port = mqttBrokerPort;
       _mqttClient!.keepAlivePeriod = 60;
       _mqttClient!.autoReconnect = true;
