@@ -164,7 +164,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                       _InfoRow(
                         icon: Icons.wifi,
                         label: 'IP Address',
-                        value: device.ipAddress,
+                        value: device.ipAddress ?? '',  // ✅ Add ?? '' for null safety
                         color: isDark ? AppTheme.neonCyan : Colors.blue,
                       ),
                       if (device.gpioPin != null)
