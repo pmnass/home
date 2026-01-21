@@ -318,56 +318,58 @@ class _DeviceCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (device.gpioPin != null || device.statusPin != null)
+                    Text(
+                      [
+                        if (device.gpioPin != null) 'GPIO ${device.gpioPin}',
+                        if (device.statusPin != null) 'Status ${device.statusPin}',
+                      ].join(' • '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white54 : Colors.black54,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-  children: [
-    if (device.gpioPin != null || device.statusPin != null)
-      Text(
-        [
-          if (device.gpioPin != null) 'GPIO ${device.gpioPin}',
-          if (device.statusPin != null) 'Status ${device.statusPin}',
-        ].join(' • '),
-        style: TextStyle(
-          fontSize: 12,
-          color: isDark ? Colors.white54 : Colors.black54,
-        ),
-      ),
-    if (device.hasBattery && device.batteryLevel != null) ...[
-      const SizedBox(width: 8),
-      Icon(
-        device.batteryLevel! > 20 ? Icons.battery_std : Icons.battery_alert,
-        size: 14,
-        color: device.batteryLevel! > 20 ? AppTheme.neonGreen : AppTheme.neonRed,
-      ),
-      Text(
-        '${device.batteryLevel}%',
-        style: TextStyle(
-          fontSize: 12,
-          color: device.batteryLevel! > 20 ? AppTheme.neonGreen : AppTheme.neonRed,
-        ),
-      ),
-    ],
-    if (device.isStale) ...[
-      const SizedBox(width: 8),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppTheme.neonAmber.withValues(alpha:0.2),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Text(
-          'STALE',
-          style: TextStyle(
-            fontSize: 8,
-            color: AppTheme.neonAmber,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    ],
-  ],
-),
+                    ),
+                  if (device.hasBattery && device.batteryLevel != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      device.batteryLevel! > 20 ? Icons.battery_std : Icons.battery_alert,
+                      size: 14,
+                      color: device.batteryLevel! > 20 ? AppTheme.neonGreen : AppTheme.neonRed,
+                    ),
+                    Text(
+                      '${device.batteryLevel}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: device.batteryLevel! > 20 ? AppTheme.neonGreen : AppTheme.neonRed,
+                      ),
+                    ),
+                  ],
+                  if (device.isStale) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.neonAmber.withValues(alpha:0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'STALE',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: AppTheme.neonAmber,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
                 // Power toggle
                 if (device.type != DeviceType.gasSensor &&
                     device.type != DeviceType.sensorOnly)
