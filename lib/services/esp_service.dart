@@ -227,6 +227,15 @@ class EspService {
       return await sendHttpCommand(ipAddress, command);
     }
   }
+  void switchProtocol(CommunicationProtocol newProtocol) {
+  if (protocol == newProtocol) return;
+  
+  if (protocol == CommunicationProtocol.mqtt) {
+    disconnectMQTT();
+  }
+  
+  protocol = newProtocol;
+}
 
   // ==================== MQTT CALLBACKS ====================
   
