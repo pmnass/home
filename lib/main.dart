@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';   // ✅ Needed for AppProvider
 import 'providers/app_provider.dart';      // ✅ Your MQTT logic lives here
-
+import 'screens/device_detail_screen.dart';
 
 void main() {
   runApp(const HomeCircuitApp());
