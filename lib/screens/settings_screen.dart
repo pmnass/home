@@ -506,7 +506,7 @@ class SettingsScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      device.ipAddress,
+                                      device.ipAddress ?? 'No IP',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: isDark
