@@ -8,9 +8,9 @@ import '../models/mqtt_message.dart';
 enum CommunicationProtocol { http, mqtt }
 
 class EspService {
-  final CommunicationProtocol protocol;
-  final String mqttBrokerIp;
-  final int mqttBrokerPort;
+  CommunicationProtocol protocol;  // ✅ Remove 'final'
+  String? mqttBrokerIp;           // ✅ Remove 'final'
+  int mqttBrokerPort;             // ✅ Remove 'final'
   
   MqttServerClient? _mqttClient;
   final StreamController<AppMqttMessage> _messageController = 
