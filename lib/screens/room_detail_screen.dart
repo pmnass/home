@@ -322,18 +322,17 @@ class _DeviceCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
   children: [
-    if (device.gpioPin != null || device.statusPin != null)
-    if (device.gpioPin != null || device.statusPin != null)
-  Text(
-    [
-      if (device.gpioPin != null) 'GPIO ${device.gpioPin}',
-      if (device.statusPin != null) 'Status ${device.statusPin}',
-    ].join(' • '),
-    style: TextStyle(
-      fontSize: 12,
-      color: isDark ? Colors.white70 : Colors.black54,
+  if (device.gpioPin != null || device.statusPin != null)  // ✅ KEEP ONLY ONE
+    Text(
+      [
+        if (device.gpioPin != null) 'GPIO ${device.gpioPin}',
+        if (device.statusPin != null) 'Status ${device.statusPin}',
+      ].join(' • '),
+      style: TextStyle(
+        fontSize: 12,
+        color: isDark ? Colors.white54 : Colors.black54,
+      ),
     ),
-  ),
     if (device.hasBattery && device.batteryLevel != null) ...[
       const SizedBox(width: 8),
       Icon(
